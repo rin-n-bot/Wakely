@@ -7,7 +7,6 @@
     "icon": "./assets/images/icon.png",
     "scheme": "wakelymapalarmapp",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.wakely.app",
@@ -15,13 +14,13 @@
         "UIBackgroundModes": [
           "location",
           "fetch",
-          "remote-notification"
+          "remote-notification",
+          "audio"
         ]
       }
     },
     "android": {
       "package": "com.wakely.app",
-      "edgeToEdgeEnabled": true,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png"
@@ -36,35 +35,44 @@
         "VIBRATE",
         "SCHEDULE_EXACT_ALARM",
         "INTERNET",
-        "RECEIVE_BOOT_COMPLETED"
+        "RECEIVE_BOOT_COMPLETED",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
       ]
     },
     "plugins": [
-  [
-    "@maplibre/maplibre-react-native/app.plugin.js", 
-    {}
-  ],
-  [
-    "expo-location",
-    {
-      "locationAlwaysPermission": "Wakely needs your location to wake you up even when the app is closed.",
-      "isAndroidBackgroundLocationEnabled": true,
-      "isAndroidForegroundServiceEnabled": true
-    }
-  ],
-  "expo-task-manager",
-  "expo-notifications",
-  [
-    "expo-splash-screen",
-    {
-      "image": "./assets/images/splash-icon.png",
-      "imageWidth": 200,
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff",
-      "dark": { "backgroundColor": "#000000" }
-    }
-  ]
-],
+      [
+        "@maplibre/maplibre-react-native/app.plugin.js",
+        {}
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysPermission": "Wakely needs your location to wake you up even when the app is closed.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ],
+      "expo-task-manager",
+      "expo-notifications",
+      [
+        "expo-av",
+        {
+          "microphonePermission": false
+        }
+      ],
+      "expo-file-system",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff",
+          "dark": { "backgroundColor": "#000000" }
+        }
+      ]
+    ],
     "extra": {
       "eas": {
         "projectId": "606e3827-4d12-4230-b350-a1eff812d885"

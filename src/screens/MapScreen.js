@@ -1,11 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, Alert } from 'react-native';
-import { Map, Camera, UserLocation, PointAnnotation, ShapeSource, Layer } from '@maplibre/maplibre-react-native';
+import { View, StyleSheet, Alert, TouchableOpacity } from 'react-native';
+import {
+  Map,
+  Camera,
+  UserLocation,
+  PointAnnotation,
+  ShapeSource,
+  Layer,
+  compass,
+} from '@maplibre/maplibre-react-native';
 import * as Location from 'expo-location';
+import { Ionicons } from '@expo/vector-icons';
+import { COLORS } from '../constants/theme';
+import { LinearGradient } from 'expo-linear-gradient';
+import GlassButton from '../components/GlassButton';
 
 
 // Constants
-const OSM_STYLE_URL      = 'https://tiles.openfreemap.org/styles/positron';
+const OSM_STYLE_URL      = 'https://tiles.openfreemap.org/styles/dark';
 const ALARM_RADIUS_M     = 300;
 const CIRCLE_PIXEL_RATIO = 0.075;
 
@@ -25,11 +37,12 @@ function alarmRadiusShape(coordinates) {
 
 // Screen
 export default function MapScreen() {
-  const cameraRef                     = useRef(null);
-  const [userCoords, setUserCoords]   = useState(null);
-  const [destination, setDestination] = useState(null);
-  const [cameraMoved, setCameraMoved] = useState(false);
-  const DEFAULT_CENTER                = [125.4553, 7.1907]; 
+  const cameraRef                         = useRef(null);
+  const [userCoords, setUserCoords]       = useState(null);
+  const [destination, setDestination]     = useState(null);
+  const [cameraCenter, setCameraCenter]   = useState(null);
+  const [recenterKey, setRecenterKey]     = useState(0);
+  const DEFAULT_CENTER                    = [125.4553, 7.1907];
 
   useEffect(() => {
     requestInitialLocation();
@@ -46,17 +59,27 @@ export default function MapScreen() {
     const initial = await Location.getCurrentPositionAsync({
       accuracy: Location.Accuracy.High,
     });
-    setUserCoords(toCoords(initial));
+    const coords = toCoords(initial);
+    setUserCoords(coords);
+    setCameraCenter(coords);
   }
 
   function handleLocationUpdate(location) {
-    setUserCoords(toCoords(location));
+    const coords = toCoords(location);
+    setUserCoords(coords);
   }
 
   function handleLongPress(event) {
     setDestination(event.nativeEvent.coordinate);
   }
 
+
+  // Re-center by updating center state + bumping key to force Camera re-fly
+  function handleRecenterPress() {
+    if (!userCoords) return;
+    setCameraCenter([...userCoords]);
+    setRecenterKey(k => k + 1);
+  }
 
   return (
     <View style={styles.container}>
@@ -68,14 +91,17 @@ export default function MapScreen() {
         logoPosition={{ bottom: -100, left: -100 }}
         attributionEnabled={false}
         attributionPosition={{ bottom: -100, right: -100 }}
+        compassEnabled
+        compassPosition={{ bottom: 130, right: 18 }}
+        compassViewMargins={{ x: 0, y: 0 }}
       >
         <Camera
+          key={recenterKey}
           ref={cameraRef}
           zoom={14}
-          center={userCoords ?? DEFAULT_CENTER}
-          animationMode={userCoords ? 'flyTo' : 'none'}
-          animationDuration={500}
-          onUserTrackingModeChange={() => setCameraMoved(true)}
+          center={cameraCenter ?? DEFAULT_CENTER}
+          animationMode={cameraCenter ? 'flyTo' : 'none'}
+          animationDuration={600}
         />
 
         <UserLocation
@@ -106,6 +132,24 @@ export default function MapScreen() {
           </>
         )}
       </Map>
+
+      {/* Purple-dark tint overlay */}
+      <View style={styles.mapTint} pointerEvents="none" />
+
+      {/* Bottom fade — blends map into navbar */}
+      <LinearGradient
+        colors={['transparent', 'rgba(5,5,14,0.75)', 'rgba(5,5,14,0.98)']}
+        style={styles.bottomFade}
+        pointerEvents="none"
+      />
+
+      {/* Bottom-right button stack: compass sits above, recenter below */}
+      <View style={styles.buttonStack} pointerEvents="box-none">
+        {/* Location / recenter button */}
+        <GlassButton onPress={handleRecenterPress}>
+          <Ionicons name="navigate" size={24} color="#FFFFFF" />
+        </GlassButton>
+      </View>
     </View>
   );
 }
@@ -113,9 +157,14 @@ export default function MapScreen() {
 
 // Styles
 const styles = StyleSheet.create({
-  
+
   container: { flex: 1 },
   map:       { flex: 1 },
+
+  mapTint: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(5, 5, 14, 0.35)',
+  },
 
   destinationMarker: {
     width:           16,
@@ -125,5 +174,25 @@ const styles = StyleSheet.create({
     borderWidth:     2,
     borderColor:     '#FFFFFF',
   },
-  
+
+
+  // Bottom-right stack — compass is rendered by MapLibre above this
+  buttonStack: {
+    position:       'absolute',
+    bottom:         60,
+    right:           18,
+    alignItems:     'center',
+    gap:            10,
+  },
+
+
+  // Bottom fade — blends map into navbar
+  bottomFade: {
+    position: 'absolute',
+    bottom:   0,
+    left:     0,
+    right:    0,
+    height:   90,   // adjust to taste
+  },
+
 });

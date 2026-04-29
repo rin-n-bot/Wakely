@@ -1,29 +1,399 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  StatusBar,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { COLORS, FONTS } from '../constants/theme';
+import GlassCard from '../components/GlassCard';
+import { ImageBackground } from 'react-native';
 
 
-export default function HomeScreen() {
+// Data 
+const QUICK_ACTIONS = [
+  { icon: 'download-outline', label: 'Download\nMaps' },
+  { icon: 'location-outline', label: 'My Places'      },
+  { icon: 'settings-outline', label: 'Settings'       },
+  { icon: 'time-outline',     label: 'History'        },
+];
+
+
+// Floating Buttons 
+// position: absolute — sit on top of everything, never scroll
+function FloatingHeader() {
+  const { top } = useSafeAreaInsets();
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.text}>Wakely Home</Text>
+    <View style={[styles.floatingHeader, { top: top + 10 }]}>
+
+      <TouchableOpacity hitSlop={12} activeOpacity={0.7} style={styles.floatButton}>
+        <View style={styles.burgerLines}>
+          <View style={styles.burgerLine} />
+          <View style={styles.burgerLine} />
+          <View style={styles.burgerLine} />
+        </View>
+      </TouchableOpacity>
+
+      <TouchableOpacity hitSlop={12} activeOpacity={0.7} style={styles.floatButton}>
+        <Ionicons name="notifications-outline" size={22} color={COLORS.textPrimary} />
+      </TouchableOpacity>
+
     </View>
   );
 }
 
 
+// Hero
+function Hero() {
+  const { top } = useSafeAreaInsets();
+
+  return (
+    <View style={[styles.hero, { paddingTop: top + 60 }]}>
+      <View style={styles.heroTextBlock}>
+        <Text style={styles.heroGreeting}>Good night,</Text>
+        <Text style={styles.heroName}>Traveler </Text>
+        <Text style={styles.heroSubtitle}>
+          Sleep well, we'll wake you up{'\n'}at the right place.
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+
+// Next Alarm Card 
+function NextAlarmCard() {
+  return (
+    <GlassCard style={{ marginTop: 20 }}>
+      <View style={styles.alarmTopRow}>
+        <View style={styles.alarmInfoBlock}>
+          <Text style={styles.cardSectionLabel}>Next Alarm</Text>
+          <Text style={styles.alarmDestination}>Carmen, Davao del Norte</Text>
+          <Text style={styles.alarmMeta}>Radius: 300 m</Text>
+          <View style={styles.alarmStatusRow}>
+            <Ionicons name="ellipse-outline" size={11} color={COLORS.textSecondary} />
+            <Text style={[styles.alarmMeta, { marginLeft: 4 }]}>Status: Inactive</Text>
+          </View>
+        </View>
+
+        <View style={styles.clockBubble}>
+          <Ionicons name="alarm-outline" size={26} color={COLORS.textPrimary} />
+        </View>
+      </View>
+
+      <TouchableOpacity activeOpacity={0.82} style={styles.ctaTouchable}>
+        <LinearGradient
+          colors={['#9d6fff', '#7C5CE8', '#5c40cc']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.ctaGradient}
+        >
+          <Ionicons name="add" size={20} color={COLORS.textPrimary} />
+          <Text style={styles.ctaLabel}>Set New Destination</Text>
+        </LinearGradient>
+      </TouchableOpacity>
+    </GlassCard>
+  );
+}
+
+
+// Quick Actions Card 
+function QuickActionsCard() {
+  return (
+    <GlassCard>
+      <Text style={styles.cardSectionLabel}>Quick Actions</Text>
+      <View style={styles.actionsGrid}>
+        {QUICK_ACTIONS.map((item) => (
+          <TouchableOpacity key={item.label} style={styles.actionCol} activeOpacity={0.7}>
+            <View style={styles.actionIconBox}>
+              <Ionicons name={item.icon} size={22} color={COLORS.textPrimary} />
+            </View>
+            <Text style={styles.actionLabel}>{item.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </GlassCard>
+  );
+}
+
+
+// Screen component
+export default function HomeScreen() {
+  return (
+    <ImageBackground
+      source={require('../../assets/images/hero-bg.png')}
+      style={styles.root}
+      resizeMode="cover"
+      imageStyle={{ transform: [{ translateY: -30 }] }} // move image up
+    >
+
+      {/* Dark gradient tint — heavy at bottom, transparent at top to show sky */}
+      <LinearGradient
+        colors={[
+          'transparent',
+          'rgba(5,5,14,0.5)',
+          'rgba(5,5,14,0.85)',
+          'rgba(5,5,14,0.98)',
+        ]}
+        locations={[0, 0.35, 0.65, 1]}
+        style={styles.imageTint}
+        pointerEvents="none"
+      />
+
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+
+      <SafeAreaView style={styles.safe} edges={['bottom']}>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
+          <Hero />
+          <View style={styles.body}>
+            <NextAlarmCard />
+            <QuickActionsCard />
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+
+      {/* Absolutely positioned — floats over scroll content always */}
+      <FloatingHeader />
+
+      {/* Top fade — blends content into top edge behind floating header */}
+      <LinearGradient
+        colors={['rgba(5,5,14,0.98)', 'rgba(5,5,14,0.75)', 'transparent']}
+        style={styles.topFade}
+        pointerEvents="none"
+      />
+
+      {/* Bottom fade — blends map into navbar */}
+      <LinearGradient
+        colors={['transparent', 'rgba(5,5,14,0.75)', 'rgba(5,5,14,0.98)']}
+        style={styles.bottomFade}
+        pointerEvents="none"
+      />
+
+    </ImageBackground>
+  );
+}
+
+
+// Styles 
 const styles = StyleSheet.create({
 
-  container: { 
-    flex: 1, 
-    justifyContent: 'center', 
-    alignItems: 'center',
-    backgroundColor: '#05050e',
+  root: {
+    flex: 1,
+    backgroundColor: COLORS.background,
   },
 
-  text: { 
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
   
+  // Backgroundimage Tint
+  imageTint: {
+  ...StyleSheet.absoluteFillObject,
+  backgroundColor: 'rgba(5, 5, 14, 0.60)',  // slightly stronger than map since image is busy
+  zIndex: 0,
+  },
+
+
+  safe: {
+    flex: 1,
+  },
+
+  scroll: {
+    flex: 1,
+  },
+
+  scrollContent: {
+    paddingBottom: 50,
+  },
+
+
+  // Floating header — absolute, always stays in place
+  floatingHeader: {
+    position:          'absolute',
+    left:              0,
+    right:             0,
+    flexDirection:     'row',
+    justifyContent:    'space-between',
+    alignItems:        'center',
+    paddingHorizontal: 25,
+    paddingTop:        10,
+    zIndex:            10,
+  },
+
+
+  // Drawermenu (burgerlines)
+  burgerLines: {
+    gap: 6,
+  },
+
+  burgerLine: {
+    width:           23, 
+    height:          2, 
+    borderRadius:    2,
+    backgroundColor: COLORS.textPrimary,
+  },
+
+
+  // Hero
+  hero: {
+    width:          '100%',
+    height:         340,
+    justifyContent: 'flex-end',
+    paddingBottom:  40,
+  },
+
+  heroTextBlock: {
+    paddingHorizontal: 25,
+  },
+
+  heroGreeting: {
+    ...FONTS.heroGreeting,
+    color: COLORS.textPrimary,
+  },
+
+  heroName: {
+    ...FONTS.heroName,
+    color:     COLORS.textPrimary,
+    marginTop: 2,
+  },
+
+  heroSubtitle: {
+    ...FONTS.heroSubtitle,
+    color:     COLORS.textSecondary,
+    marginTop: 6,
+  },
+
+
+  // Body
+  body: {
+    paddingHorizontal: 16,
+    paddingTop:        14,
+    gap:               12,
+  },
+
+  cardSectionLabel: {
+    ...FONTS.sectionLabel,
+    color:        COLORS.textSecondary,
+    marginBottom: 8,
+  },
+
+
+  // Alarm card
+  alarmTopRow: {
+    flexDirection:  'row',
+    justifyContent: 'space-between',
+    alignItems:     'center',
+  },
+
+  alarmInfoBlock: {
+    flex: 1,
+    gap:  4,
+  },
+
+  alarmDestination: {
+    ...FONTS.cardTitle,
+    color: COLORS.textPrimary,
+  },
+
+  alarmMeta: {
+    ...FONTS.cardMeta,
+    color: COLORS.textSecondary,
+  },
+
+  alarmStatusRow: {
+    flexDirection: 'row',
+    alignItems:    'center',
+    marginTop:     2,
+  },
+
+  clockBubble: {
+    width:           52,
+    height:          52,
+    borderRadius:    26,
+    backgroundColor: COLORS.accentSoft,
+    borderWidth:     1,
+    borderColor:     'rgba(124,92,232,0.35)',
+    alignItems:      'center',
+    justifyContent:  'center',
+    marginLeft:      14,
+  },
+
+  ctaTouchable: {
+    marginTop:    16,
+    borderRadius: 12,
+    overflow:     'hidden',
+  },
+
+  ctaGradient: {
+    flexDirection:   'row',
+    alignItems:      'center',
+    justifyContent:  'center',
+    paddingVertical: 15,
+    gap:             6,
+  },
+
+  ctaLabel: {
+    ...FONTS.cardButton,
+    color: COLORS.textPrimary,
+  },
+
+
+  // Quick actions
+  actionsGrid: {
+    flexDirection: 'row',
+    alignItems:    'flex-start',
+    marginTop:     4,
+  },
+
+  actionCol: {
+    flex:       1,
+    alignItems: 'center',
+    gap:        8,
+  },
+
+  actionIconBox: {
+    width:           52,
+    height:          52,
+    borderRadius:    13,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth:     1,
+    borderColor:     COLORS.border,
+    alignItems:      'center',
+    justifyContent:  'center',
+  },
+
+  actionLabel: {
+    ...FONTS.actionLabel,
+    color:     COLORS.textPrimary,
+    textAlign: 'center',
+  },
+
+
+  // Top fade — blends content into top edge behind floating header
+  topFade: {
+    position: 'absolute',
+    top:      0,
+    left:     0,
+    right:    0,
+    height:   120,
+  },
+
+
+  // Bottom fade — blends content into navbar
+  bottomFade: {
+    position: 'absolute',
+    bottom:   0,
+    left:     0,
+    right:    0,
+    height:   90,
+  },
+
 });
