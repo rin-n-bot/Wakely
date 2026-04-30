@@ -10,7 +10,6 @@ import AlarmsScreen  from '../screens/AlarmsScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import { FONTS } from '../constants/theme';
 
-
 // Constants
 const COLORS = {
   background: '#05050e',
@@ -25,7 +24,6 @@ const TABS = [
   { name: 'Alarms',  label: 'Alarms',  icon: 'notifications-outline', iconFocused: 'notifications', screen: AlarmsScreen  },
   { name: 'Settings', label: 'Settings', icon: 'settings-outline',      iconFocused: 'settings',        screen: SettingsScreen },
 ];
-
 
 // Tab Bar
 function WakelyTabBar({ state, navigation }) {
@@ -57,7 +55,6 @@ function WakelyTabBar({ state, navigation }) {
   );
 }
 
-
 // Navigator
 const Tab = createBottomTabNavigator();
 
@@ -74,10 +71,8 @@ export default function RootNavigator() {
   );
 }
 
-
 // Styles
 const styles = StyleSheet.create({
-
   tabBar: {
     flexDirection:   'row',
     backgroundColor: COLORS.background,
@@ -85,6 +80,7 @@ const styles = StyleSheet.create({
     borderTopColor:  '#05050e',
     paddingTop:      5,
     height:          80,
+    paddingBottom: 20,
   },
 
   tabItem: {
@@ -92,6 +88,7 @@ const styles = StyleSheet.create({
     alignItems:     'center',
     justifyContent: 'center',
     gap:            4,
+    paddingBottom: 20,
   },
 
   label: {
@@ -99,5 +96,4 @@ const styles = StyleSheet.create({
     fontWeight:    '500',
     letterSpacing: 0.2,
   },
-
 });

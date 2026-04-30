@@ -15,12 +15,10 @@ import { COLORS } from '../constants/theme';
 import { LinearGradient } from 'expo-linear-gradient';
 import GlassButton from '../components/GlassButton';
 
-
 // Constants
 const OSM_STYLE_URL      = 'https://tiles.openfreemap.org/styles/dark';
 const ALARM_RADIUS_M     = 300;
 const CIRCLE_PIXEL_RATIO = 0.075;
-
 
 // Helpers
 function toCoords(location) {
@@ -33,7 +31,6 @@ function alarmRadiusShape(coordinates) {
     geometry: { type: 'Point', coordinates },
   };
 }
-
 
 // Screen
 export default function MapScreen() {
@@ -73,7 +70,6 @@ export default function MapScreen() {
     setDestination(event.nativeEvent.coordinate);
   }
 
-
   // Re-center by updating center state + bumping key to force Camera re-fly
   function handleRecenterPress() {
     if (!userCoords) return;
@@ -92,7 +88,7 @@ export default function MapScreen() {
         attributionEnabled={false}
         attributionPosition={{ bottom: -100, right: -100 }}
         compassEnabled
-        compassPosition={{ bottom: 130, right: 18 }}
+        compassPosition={{ bottom: 125, right: 18 }}
         compassViewMargins={{ x: 0, y: 0 }}
       >
         <Camera
@@ -154,7 +150,6 @@ export default function MapScreen() {
   );
 }
 
-
 // Styles
 const styles = StyleSheet.create({
 
@@ -163,7 +158,7 @@ const styles = StyleSheet.create({
 
   mapTint: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(5, 5, 14, 0.35)',
+    backgroundColor: 'rgba(5, 5, 14, 0.24)',
   },
 
   destinationMarker: {
@@ -175,7 +170,6 @@ const styles = StyleSheet.create({
     borderColor:     '#FFFFFF',
   },
 
-
   // Bottom-right stack — compass is rendered by MapLibre above this
   buttonStack: {
     position:       'absolute',
@@ -185,14 +179,12 @@ const styles = StyleSheet.create({
     gap:            10,
   },
 
-
   // Bottom fade — blends map into navbar
   bottomFade: {
     position: 'absolute',
     bottom:   0,
     left:     0,
     right:    0,
-    height:   90,   // adjust to taste
+    height:   40,   // adjust to taste
   },
-
 });

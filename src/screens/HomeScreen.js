@@ -14,7 +14,6 @@ import { COLORS, FONTS } from '../constants/theme';
 import GlassCard from '../components/GlassCard';
 import { ImageBackground } from 'react-native';
 
-
 // Data 
 const QUICK_ACTIONS = [
   { icon: 'download-outline', label: 'Download\nMaps' },
@@ -23,9 +22,7 @@ const QUICK_ACTIONS = [
   { icon: 'time-outline',     label: 'History'        },
 ];
 
-
 // Floating Buttons 
-// position: absolute — sit on top of everything, never scroll
 function FloatingHeader() {
   const { top } = useSafeAreaInsets();
 
@@ -40,6 +37,8 @@ function FloatingHeader() {
         </View>
       </TouchableOpacity>
 
+      <Text style={styles.appName}>wakely</Text>
+
       <TouchableOpacity hitSlop={12} activeOpacity={0.7} style={styles.floatButton}>
         <Ionicons name="notifications-outline" size={22} color={COLORS.textPrimary} />
       </TouchableOpacity>
@@ -47,7 +46,6 @@ function FloatingHeader() {
     </View>
   );
 }
-
 
 // Hero
 function Hero() {
@@ -66,11 +64,10 @@ function Hero() {
   );
 }
 
-
 // Next Alarm Card 
-function NextAlarmCard() {
+function NextAlarmCard({ navigation }) {
   return (
-    <GlassCard style={{ marginTop: 20 }}>
+    <GlassCard style={{ marginTop: 80 }}>
       <View style={styles.alarmTopRow}>
         <View style={styles.alarmInfoBlock}>
           <Text style={styles.cardSectionLabel}>Next Alarm</Text>
@@ -87,7 +84,11 @@ function NextAlarmCard() {
         </View>
       </View>
 
-      <TouchableOpacity activeOpacity={0.82} style={styles.ctaTouchable}>
+      <TouchableOpacity
+        activeOpacity={0.82}
+        style={styles.ctaTouchable}
+        onPress={() => navigation.getParent()?.navigate('SetDestination')}
+      >
         <LinearGradient
           colors={['#9d6fff', '#7C5CE8', '#5c40cc']}
           start={{ x: 0, y: 0 }}
@@ -101,7 +102,6 @@ function NextAlarmCard() {
     </GlassCard>
   );
 }
-
 
 // Quick Actions Card 
 function QuickActionsCard() {
@@ -122,18 +122,16 @@ function QuickActionsCard() {
   );
 }
 
-
 // Screen component
-export default function HomeScreen() {
+export default function HomeScreen({ navigation }) {
   return (
     <ImageBackground
       source={require('../../assets/images/hero-bg.png')}
       style={styles.root}
       resizeMode="cover"
-      imageStyle={{ transform: [{ translateY: -30 }] }} // move image up
+      imageStyle={{ transform: [{ translateY: -30 }] }}
     >
 
-      {/* Dark gradient tint — heavy at bottom, transparent at top to show sky */}
       <LinearGradient
         colors={[
           'transparent',
@@ -157,26 +155,17 @@ export default function HomeScreen() {
         >
           <Hero />
           <View style={styles.body}>
-            <NextAlarmCard />
+            <NextAlarmCard navigation={navigation} />
             <QuickActionsCard />
           </View>
         </ScrollView>
       </SafeAreaView>
 
-      {/* Absolutely positioned — floats over scroll content always */}
       <FloatingHeader />
 
-      {/* Top fade — blends content into top edge behind floating header */}
       <LinearGradient
         colors={['rgba(5,5,14,0.98)', 'rgba(5,5,14,0.75)', 'transparent']}
         style={styles.topFade}
-        pointerEvents="none"
-      />
-
-      {/* Bottom fade — blends map into navbar */}
-      <LinearGradient
-        colors={['transparent', 'rgba(5,5,14,0.75)', 'rgba(5,5,14,0.98)']}
-        style={styles.bottomFade}
         pointerEvents="none"
       />
 
@@ -184,23 +173,18 @@ export default function HomeScreen() {
   );
 }
 
-
 // Styles 
 const styles = StyleSheet.create({
-
   root: {
     flex: 1,
     backgroundColor: COLORS.background,
   },
 
-  
-  // Backgroundimage Tint
   imageTint: {
-  ...StyleSheet.absoluteFillObject,
-  backgroundColor: 'rgba(5, 5, 14, 0.60)',  // slightly stronger than map since image is busy
-  zIndex: 0,
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(5, 5, 14, 0.8)',
+    zIndex: 0,
   },
-
 
   safe: {
     flex: 1,
@@ -214,8 +198,6 @@ const styles = StyleSheet.create({
     paddingBottom: 50,
   },
 
-
-  // Floating header — absolute, always stays in place
   floatingHeader: {
     position:          'absolute',
     left:              0,
@@ -228,26 +210,29 @@ const styles = StyleSheet.create({
     zIndex:            10,
   },
 
+  appName: {
+    fontSize:      22,
+    fontWeight:    '700',
+    letterSpacing: 1,
+    color:         COLORS.accent,
+  },
 
-  // Drawermenu (burgerlines)
   burgerLines: {
     gap: 6,
   },
 
   burgerLine: {
-    width:           23, 
-    height:          2, 
+    width:           23,
+    height:          2,
     borderRadius:    2,
     backgroundColor: COLORS.textPrimary,
   },
 
-
-  // Hero
   hero: {
     width:          '100%',
-    height:         340,
+    height:         280,
     justifyContent: 'flex-end',
-    paddingBottom:  40,
+    paddingBottom:  20,
   },
 
   heroTextBlock: {
@@ -271,8 +256,6 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
 
-
-  // Body
   body: {
     paddingHorizontal: 16,
     paddingTop:        14,
@@ -285,8 +268,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
 
-
-  // Alarm card
   alarmTopRow: {
     flexDirection:  'row',
     justifyContent: 'space-between',
@@ -345,8 +326,6 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
   },
 
-
-  // Quick actions
   actionsGrid: {
     flexDirection: 'row',
     alignItems:    'flex-start',
@@ -376,24 +355,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-
-  // Top fade — blends content into top edge behind floating header
   topFade: {
     position: 'absolute',
     top:      0,
     left:     0,
     right:    0,
-    height:   120,
+    height:   100,
   },
-
-
-  // Bottom fade — blends content into navbar
-  bottomFade: {
-    position: 'absolute',
-    bottom:   0,
-    left:     0,
-    right:    0,
-    height:   90,
-  },
-
 });

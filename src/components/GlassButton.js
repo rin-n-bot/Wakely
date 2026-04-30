@@ -21,10 +21,11 @@ export default function GlassButton({ onPress, children, style }) {
       style={[styles.shadow, style]}
       onPress={onPress}
     >
+      
       {/* Inner shine overlay — top-left bright, fades to bottom-right */}
       <LinearGradient
         colors={[
-          'rgba(255,255,255,0.04)',
+          'rgba(255,255,255,0.06)',
           'rgba(255,255,255,0.01)',
           'transparent',
         ]}
@@ -46,8 +47,8 @@ const styles = StyleSheet.create({
     borderRadius:    10,
     borderWidth:     1,
     borderColor:     'rgba(255,255,255,0.10)',
-    borderTopColor:  'rgba(255,255,255,0.12)',
-    borderLeftColor: 'rgba(255,255,255,0.11)',
+    borderTopColor:  'rgba(255,255,255,0.14)',
+    borderLeftColor: 'rgba(255,255,255,0.13)',
     backgroundColor: 'rgba(20,22,45,0.75)',
     padding:         11,
     shadowColor:     '#000',

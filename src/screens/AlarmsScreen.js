@@ -16,7 +16,6 @@ import GlassCard                 from '../components/GlassCard';
 import FloatingGradientButton    from '../components/FloatingGradientButton';
 import { LinearGradient }        from 'expo-linear-gradient';
 
-
 // Constants 
 const ALARM_RADIUS_MIN    = 100;
 const ALARM_RADIUS_MAX    = 1000;
@@ -28,12 +27,10 @@ const EARLY_WARNING_MAX   = 1000;
 const ALARM_SOUND_OPTIONS = ['Rise & Shine', 'Gentle Wake', 'Radar', 'Beacon'];
 const VIBRATION_OPTIONS   = ['Strong', 'Medium', 'Light', 'None'];
 
-
 // Helpers 
 function formatMeters(meters) {
   return meters >= 1000 ? '1 km' : `${meters} m`;
 }
-
 
 // Subcomponents 
 // Back arrow + title + info icon.
@@ -46,7 +43,6 @@ function ScreenHeader({ title, onBack, onInfo, topInset }) {
   );
 }
 
-
 // Evenly spaced tick labels rendered below a slider.
 function SliderTicks({ ticks }) {
   return (
@@ -57,7 +53,6 @@ function SliderTicks({ ticks }) {
     </View>
   );
 }
-
 
 // Glass card with a slider to set the alarm trigger radius
 function AlarmRadiusCard({ radius, onChange }) {
@@ -87,7 +82,6 @@ function AlarmRadiusCard({ radius, onChange }) {
     </GlassCard>
   );
 }
-
 
 // Glass card with a toggle and an optional slider for early warning distance.
 function EarlyWarningCard({ enabled, radius, onToggle, onRadiusChange }) {
@@ -127,7 +121,6 @@ function EarlyWarningCard({ enabled, radius, onToggle, onRadiusChange }) {
   );
 }
 
-
 // A plain (no card) label + value + chevron row for Sound and Vibration.
 function SettingRow({ label, value, onPress }) {
   return (
@@ -145,12 +138,10 @@ function SettingRow({ label, value, onPress }) {
   );
 }
 
-
 // A thin separator line between plain setting rows.
 function SettingDivider() {
   return <View style={styles.divider} />;
 }
-
 
 // Screen 
 export default function AlarmsScreen({ navigation }) {
@@ -178,7 +169,7 @@ export default function AlarmsScreen({ navigation }) {
       <SafeAreaView style={styles.safe} edges={['bottom']}>
 
         <ScreenHeader
-          title="Custom Alarm"
+          title="Alarm"
           topInset={top}
         />
 
@@ -188,6 +179,7 @@ export default function AlarmsScreen({ navigation }) {
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
+
           {/* Cards — only radius and early warning */}
           <AlarmRadiusCard
             radius={alarmRadius}
@@ -220,16 +212,9 @@ export default function AlarmsScreen({ navigation }) {
 
       </SafeAreaView>
 
-      {/* Bottom fade — blends map into navbar */}
-      <LinearGradient
-        colors={['transparent', 'rgba(5,5,14,0.75)', 'rgba(5,5,14,0.98)']}
-        style={styles.bottomFade}
-        pointerEvents="none"
-      />
-
       {/* Floats above everything */}
       <FloatingGradientButton
-        label="Save"
+        label="Save and Use"
         onPress={handleStartTrip}
         bottom={32}
       />
@@ -238,10 +223,8 @@ export default function AlarmsScreen({ navigation }) {
   );
 }
 
-
 // Styles 
 const styles = StyleSheet.create({
-
   root: {
     flex:            1,
     backgroundColor: COLORS.background,
@@ -251,21 +234,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-
   // Header
   header: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 32,
     paddingBottom:     16,
-    marginTop:         10,
-    alignItems:    'center',
+    marginTop:         14,
+    alignItems:    'left',
   },
 
   headerTitle: {
     ...FONTS.cardTitle,
     color:    COLORS.textPrimary,
-    fontSize: 18,
+    fontSize: 22,
   },
-
 
   // Scroll
   scroll: {
@@ -278,7 +259,6 @@ const styles = StyleSheet.create({
     paddingBottom:     120,
     gap:               12,
   },
-
 
   // Shared card internals
   cardSectionLabel: {
@@ -319,7 +299,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
-
   // Early warning card
   earlyWarningTitleRow: {
     flexDirection:  'row',
@@ -327,7 +306,6 @@ const styles = StyleSheet.create({
     alignItems:     'center',
     marginBottom:   4,
   },
-
 
   // Plain settings (no card)
   plainSettings: {
@@ -362,16 +340,4 @@ const styles = StyleSheet.create({
     height:          1,
     backgroundColor: COLORS.border,
   },
-
-  
-  // Bottom fade — blends map into navbar
-  bottomFade: {
-    position: 'absolute',
-    bottom:   0,
-    left:     0,
-    right:    0,
-    height:   90,   // adjust to taste
-  },
-
-
 });
