@@ -6,7 +6,7 @@ import {
 } from '@maplibre/maplibre-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   StatusBar,
@@ -27,33 +27,91 @@ import { COLORS, FONTS } from '../constants/theme';
 const OSM_STYLE_URL  = 'https://tiles.openfreemap.org/styles/dark';
 const DEFAULT_CENTER = [125.4553, 7.1907];
 
+const OSRM_ROUTE_URL = 'https://router.project-osrm.org/route/v1/driving';
+const ROUTE_REFRESH_DISTANCE_METERS = 35;
+const ROUTE_REFRESH_INTERVAL_MS = 7000;
+const REVERSE_GEOCODE_DISTANCE_METERS = 100;
+const COORDINATE_EPSILON = 0.000001;
+
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
 
-/**
- * Geocode a text query to [lon, lat] using Nominatim (OpenStreetMap).
- * Returns null when no results are found.
- */
 async function geocodePlace(query) {
   const url  = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`;
   const res  = await fetch(url, { headers: { 'Accept-Language': 'en', 'User-Agent': 'WakelyApp/1.0' } });
   const data = await res.json();
+
   if (!data.length) return null;
+
   return {
     coords: [parseFloat(data[0].lon), parseFloat(data[0].lat)],
     label:  data[0].display_name,
   };
 }
 
-/**
- * Haversine formula — straight-line distance between two [lon, lat] points.
- * Returns a readable string like "3.45 km" or "340 m", or null if inputs are missing.
- */
-function haversineDistance(coordsA, coordsB) {
+async function reverseGeocodePlace(coords) {
+  if (!coords) return null;
+
+  const [lon, lat] = coords;
+  const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=18&addressdetails=1`;
+
+  const res = await fetch(url, {
+    headers: {
+      'Accept-Language': 'en',
+      'User-Agent': 'WakelyApp/1.0',
+    },
+  });
+
+  const data = await res.json();
+  const address = data?.address ?? {};
+
+  const city =
+    address.city ??
+    address.town ??
+    address.municipality ??
+    address.village ??
+    address.county ??
+    address.state ??
+    null;
+
+  const area =
+    address.suburb ??
+    address.neighbourhood ??
+    address.quarter ??
+    address.city_district ??
+    address.district ??
+    address.borough ??
+    address.hamlet ??
+    null;
+
+  if (city && area && city !== area) {
+    return `${city}, ${area}`;
+  }
+
+  return city ?? area ?? data?.display_name ?? null;
+}
+
+
+async function fetchRouteLine(originCoords, destinationCoords) {
+  if (!originCoords || !destinationCoords) return [];
+
+  const origin      = `${originCoords[0]},${originCoords[1]}`;
+  const destination = `${destinationCoords[0]},${destinationCoords[1]}`;
+  const url         = `${OSRM_ROUTE_URL}/${origin};${destination}?overview=full&geometries=geojson`;
+
+  const res  = await fetch(url);
+  const data = await res.json();
+
+  const routeCoords = data?.routes?.[0]?.geometry?.coordinates;
+
+  return routeCoords?.length >= 2 ? routeCoords : [originCoords, destinationCoords];
+}
+
+function distanceInMeters(coordsA, coordsB) {
   if (!coordsA || !coordsB) return null;
 
-  const R      = 6371; // Earth radius in km
-  const toRad  = (deg) => (deg * Math.PI) / 180;
+  const R     = 6371000;
+  const toRad = (deg) => (deg * Math.PI) / 180;
 
   const [lonA, latA] = coordsA;
   const [lonB, latB] = coordsB;
@@ -65,16 +123,188 @@ function haversineDistance(coordsA, coordsB) {
     Math.sin(dLat / 2) ** 2 +
     Math.cos(toRad(latA)) * Math.cos(toRad(latB)) * Math.sin(dLon / 2) ** 2;
 
-  const km = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
-  // Show meters when under 1 km for better readability
-  return km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(2)} km`;
+function haversineDistance(coordsA, coordsB) {
+  const meters = distanceInMeters(coordsA, coordsB);
+
+  if (meters === null) return null;
+
+  const km = meters / 1000;
+
+  return km < 1 ? `${Math.round(meters)} m` : `${km.toFixed(2)} km`;
+}
+
+function areSameCoords(coordsA, coordsB) {
+  if (!coordsA || !coordsB) return false;
+
+  return (
+    Math.abs(coordsA[0] - coordsB[0]) < COORDINATE_EPSILON &&
+    Math.abs(coordsA[1] - coordsB[1]) < COORDINATE_EPSILON
+  );
+}
+
+function projectToMeters(coords, originLat) {
+  const [lon, lat] = coords;
+
+  return {
+    x: lon * 111320 * Math.cos((originLat * Math.PI) / 180),
+    y: lat * 110540,
+  };
+}
+
+function distanceToRouteInMeters(pointCoords, routeCoords) {
+  if (!pointCoords || routeCoords.length < 2) return Infinity;
+
+  const originLat = pointCoords[1];
+  const point     = projectToMeters(pointCoords, originLat);
+
+  let closestDistance = Infinity;
+
+  for (let index = 0; index < routeCoords.length - 1; index += 1) {
+    const start = projectToMeters(routeCoords[index], originLat);
+    const end   = projectToMeters(routeCoords[index + 1], originLat);
+
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+
+    if (dx === 0 && dy === 0) continue;
+
+    const progress = Math.max(
+      0,
+      Math.min(1, ((point.x - start.x) * dx + (point.y - start.y) * dy) / (dx * dx + dy * dy)),
+    );
+
+    const nearest = {
+      x: start.x + progress * dx,
+      y: start.y + progress * dy,
+    };
+
+    closestDistance = Math.min(closestDistance, Math.hypot(point.x - nearest.x, point.y - nearest.y));
+  }
+
+  return closestDistance;
+}
+
+function buildMapStyle(baseStyle, routeCoords, destination) {
+  if (!baseStyle) return null;
+
+
+  const routeData = {
+    type: 'FeatureCollection',
+    features: routeCoords.length >= 2
+      ? [
+          {
+            type: 'Feature',
+            geometry: {
+              type: 'LineString',
+              coordinates: routeCoords,
+            },
+            properties: {},
+          },
+        ]
+      : [],
+  };
+
+  const destinationData = {
+    type: 'FeatureCollection',
+    features: destination
+      ? [
+          {
+            type: 'Feature',
+            geometry: {
+              type: 'Point',
+              coordinates: destination,
+            },
+            properties: {},
+          },
+        ]
+      : [],
+  };
+
+  return {
+    ...baseStyle,
+    sources: {
+      ...baseStyle.sources,
+      destinationRouteSource: {
+        type: 'geojson',
+        data: routeData,
+      },
+      destinationMarkerSource: {
+        type: 'geojson',
+        data: destinationData,
+      },
+    },
+    layers: [
+      ...(baseStyle.layers ?? []),
+      {
+        id: 'destination-route-glow',
+        type: 'line',
+        source: 'destinationRouteSource',
+        layout: {
+          'line-cap': 'round',
+          'line-join': 'round',
+        },
+        paint: {
+          'line-color': 'rgba(124,92,232,0.28)',
+          'line-width': 10,
+          'line-opacity': 0.9,
+        },
+      },
+      {
+        id: 'destination-route-line',
+        type: 'line',
+        source: 'destinationRouteSource',
+        layout: {
+          'line-cap': 'round',
+          'line-join': 'round',
+        },
+        paint: {
+          'line-color': '#9d6fff',
+          'line-width': 5,
+          'line-opacity': 1,
+        },
+      },
+      {
+      id: 'destination-marker-halo',
+      type: 'circle',
+      source: 'destinationMarkerSource',
+      paint: {
+        'circle-radius': 18,
+        'circle-color': 'rgba(124,92,232,0.22)',
+        'circle-stroke-width': 2,
+        'circle-stroke-color': 'rgba(255,255,255,0.55)',
+      },
+    },
+    {
+      id: 'destination-marker-body',
+      type: 'circle',
+      source: 'destinationMarkerSource',
+      paint: {
+        'circle-radius': 10,
+        'circle-color': COLORS.accent,
+        'circle-stroke-width': 3,
+        'circle-stroke-color': '#FFFFFF',
+      },
+    },
+    {
+      id: 'destination-marker-center',
+      type: 'circle',
+      source: 'destinationMarkerSource',
+      paint: {
+        'circle-radius': 3,
+        'circle-color': '#FFFFFF',
+      },
+    },
+
+    ],
+  };
 }
 
 
 // ─── Subcomponents ────────────────────────────────────────────────────────────
 
-/** Top bar with a back button and screen title. */
 function ScreenHeader({ onBack, topInset }) {
   return (
     <View style={[styles.header, { paddingTop: topInset + 10 }]}>
@@ -87,7 +317,6 @@ function ScreenHeader({ onBack, topInset }) {
   );
 }
 
-/** Search input that fires a Nominatim geocode on submit. */
 function SearchBar({ value, onChange, onSubmit, isSearching }) {
   return (
     <GlassCard style={styles.searchCard}>
@@ -110,25 +339,18 @@ function SearchBar({ value, onChange, onSubmit, isSearching }) {
   );
 }
 
-/**
- * Bottom glass card that shows:
- *  - Destination row  → confirmed coords + distance badge, or placeholder text
- *  - Your Location row → live user coordinates
- *  - Continue button  → appears only after a destination is confirmed
- *
- * While in pin-placement mode the destination row shows a "Placing…" badge.
- * After a pin is confirmed it shows the coords and a small × button to redo.
- */
 function SelectionCard({
   destination,
+  destinationName,
   userCoords,
+  userLocationName,
   isPinMode,
   distanceLabel,
+  isRouting,
   onSelectDestination,
   onClearDestination,
   onContinue,
 }) {
-  // What to show in the destination value line
   const destLabel = destination
     ? `${destination[1].toFixed(5)},  ${destination[0].toFixed(5)}`
     : 'Tap to place a pin';
@@ -137,15 +359,19 @@ function SelectionCard({
     ? `${userCoords[1].toFixed(5)},  ${userCoords[0].toFixed(5)}`
     : 'Locating...';
 
+  const destinationCityLabel = destination
+    ? destinationName ?? 'Finding city...'
+    : 'Choose a destination';
+
+  const userCityLabel = userCoords
+    ? userLocationName ?? 'Finding city...'
+    : 'Waiting for GPS';
+
   return (
     <GlassCard style={styles.selectionCard}>
-
-      {/* ── Destination row ─────────────────────────────────────────────── */}
       <TouchableOpacity
         activeOpacity={0.7}
         style={[styles.selectionRow, isPinMode && styles.selectionRowActive]}
-        // Only allow tapping into pin mode when no destination is set yet,
-        // or when the user taps the row (not the × button) to re-enter pin mode
         onPress={!destination ? onSelectDestination : undefined}
       >
         <View style={styles.selectionIconBox}>
@@ -160,28 +386,31 @@ function SelectionCard({
           >
             {destLabel}
           </Text>
+          <Text style={styles.selectionCity} numberOfLines={2}>
+  {destinationCityLabel}
+</Text>
+
         </View>
 
-        {/* Show "Placing…" badge while the pin is being dragged */}
-        {isPinMode && !destination && (
+        {isPinMode && !destination ? (
           <View style={styles.pinModeBadge}>
             <Text style={styles.pinModeBadgeText}>Placing...</Text>
           </View>
-        )}
+        ) : null}
 
-        {/* Show distance pill + × redo button once a destination is confirmed */}
-        {destination && !isPinMode && (
+        {destination && !isPinMode ? (
           <View style={styles.destinationMeta}>
+            {isRouting ? (
+              <ActivityIndicator size="small" color={COLORS.accent} />
+            ) : null}
 
-            {/* Distance from current user location to the pinned destination */}
-            {distanceLabel && (
+            {distanceLabel ? (
               <View style={styles.distancePill}>
                 <Ionicons name="navigate-outline" size={11} color={COLORS.accent} />
                 <Text style={styles.distancePillText}>{distanceLabel}</Text>
               </View>
-            )}
+            ) : null}
 
-            {/* × button — clears the destination so the user can redo */}
             <TouchableOpacity
               hitSlop={10}
               activeOpacity={0.7}
@@ -190,26 +419,30 @@ function SelectionCard({
             >
               <Ionicons name="close" size={15} color={COLORS.textSecondary} />
             </TouchableOpacity>
-
           </View>
-        )}
+        ) : null}
       </TouchableOpacity>
 
       <View style={styles.selectionDivider} />
 
-      {/* ── Current location row (display only) ─────────────────────────── */}
       <View style={styles.selectionRow}>
         <View style={styles.selectionIconBox}>
           <Ionicons name="navigate" size={22} color={COLORS.textSecondary} />
         </View>
+
         <View style={styles.selectionText}>
           <Text style={styles.selectionLabel}>Your Location</Text>
-          <Text style={styles.selectionValue} numberOfLines={1}>{locationLabel}</Text>
+          <Text style={styles.selectionValue} numberOfLines={1}>
+            {locationLabel}
+          </Text>
+<Text style={styles.selectionCity} numberOfLines={2}>
+  {userCityLabel}
+</Text>
+
         </View>
       </View>
 
-      {/* ── Continue button — only shown when destination is confirmed ───── */}
-      {destination && !isPinMode && (
+      {destination && !isPinMode ? (
         <TouchableOpacity
           activeOpacity={0.82}
           style={styles.continueTouchable}
@@ -224,11 +457,11 @@ function SelectionCard({
             <Text style={styles.continueLabel}>Continue</Text>
           </LinearGradient>
         </TouchableOpacity>
-      )}
-
+      ) : null}
     </GlassCard>
   );
 }
+
 
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -236,57 +469,222 @@ function SelectionCard({
 export default function SetDestinationScreen({ navigation }) {
   const { top } = useSafeAreaInsets();
 
-  const [searchQuery,  setSearchQuery]  = useState('');
-  const [isSearching,  setIsSearching]  = useState(false);
-  const [userCoords,   setUserCoords]   = useState(null);   // live user [lon, lat]
-  const [cameraCenter, setCameraCenter] = useState(null);   // triggers camera animation
-  const [recenterKey,  setRecenterKey]  = useState(0);      // bump to re-fire camera
-  const [destination,  setDestination]  = useState(null);   // confirmed pin [lon, lat]
-  const [isPinMode,    setIsPinMode]    = useState(false);  // true while dragging crosshair
-  const [mapCenter,    setMapCenter]    = useState(null);   // current map center [lon, lat]
+  const [baseMapStyle,       setBaseMapStyle]       = useState(null);
+  const [searchQuery,        setSearchQuery]        = useState('');
+  const [isSearching,        setIsSearching]        = useState(false);
+  const [isRouting,          setIsRouting]          = useState(false);
+  const [userCoords,         setUserCoords]         = useState(null);
+  const [userLocationName,   setUserLocationName]   = useState(null);
+  const [cameraCenter,       setCameraCenter]       = useState(null);
+  const [recenterKey,        setRecenterKey]        = useState(0);
+  const [destination,        setDestination]        = useState(null);
+  const [destinationName,    setDestinationName]    = useState(null);
+  const [isPinMode,          setIsPinMode]          = useState(false);
+  const [mapCenter,          setMapCenter]          = useState(null);
+  const [routeCoords,        setRouteCoords]        = useState([]);
 
-  const isMounted = useRef(true);
-  const cameraRef = useRef(null);
+  const isMounted               = useRef(true);
+  const mapRef                  = useRef(null);
+  const cameraRef               = useRef(null);
+  const routeCoordsRef          = useRef([]);
+  const destinationRef          = useRef(null);
+  const routeRequestId          = useRef(0);
+  const userPlaceRequestId      = useRef(0);
+  const destinationRequestId    = useRef(0);
+  const lastRouteRefreshRef     = useRef(0);
+  const lastUserPlaceCoordsRef  = useRef(null);
+
+  const mapStyle = useMemo(
+    () => buildMapStyle(baseMapStyle, routeCoords, destination),
+    [baseMapStyle, destination, routeCoords],
+  );
 
   useEffect(() => {
     requestInitialLocation();
-    return () => { isMounted.current = false; };
+    loadBaseMapStyle();
+
+    return () => {
+      isMounted.current = false;
+    };
   }, []);
 
-  /** Ask for location permission and fly the camera to the user's position. */
-  async function requestInitialLocation() {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') return;
-    const initial = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-    if (!isMounted.current) return;
-    const coords = [initial.coords.longitude, initial.coords.latitude];
-    setUserCoords(coords);
-    setCameraCenter(coords);
-    setMapCenter(coords);
-  }
+  useEffect(() => {
+    destinationRef.current = destination;
+  }, [destination]);
 
-  /** Keep userCoords in sync as the device moves. */
-  function handleLocationUpdate(location) {
-    if (!isMounted.current) return;
-    const coords = [location.coords.longitude, location.coords.latitude];
-    setUserCoords(coords);
-  }
+  useEffect(() => {
+    if (!destination) {
+      setDestinationName(null);
+      return;
+    }
 
-  /** Track the map center as the user pans — used to read the pin position on confirm. */
-  function handleCameraChanged(event) {
-    const { geometry } = event;
-    if (geometry?.coordinates) {
-      setMapCenter(geometry.coordinates);
+    refreshDestinationName(destination);
+  }, [destination]);
+
+  async function loadBaseMapStyle() {
+    try {
+      const res  = await fetch(OSM_STYLE_URL);
+      const data = await res.json();
+
+      if (isMounted.current) {
+        setBaseMapStyle(data);
+      }
+    } catch {
+      if (isMounted.current) {
+        setBaseMapStyle(null);
+      }
     }
   }
 
-  /** Geocode the search query and fly the camera to the result. */
+  async function requestInitialLocation() {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+
+    if (status !== 'granted') return;
+
+    const initial = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+
+    if (!isMounted.current) return;
+
+    const coords = [initial.coords.longitude, initial.coords.latitude];
+
+    setUserCoords(coords);
+    setCameraCenter(coords);
+    setMapCenter(coords);
+    refreshUserLocationName(coords, { force: true });
+  }
+
+  async function refreshUserLocationName(coords, options = {}) {
+    if (!coords) return;
+
+    const previousCoords = lastUserPlaceCoordsRef.current;
+    const movedDistance  = distanceInMeters(previousCoords, coords);
+
+    if (!options.force && movedDistance !== null && movedDistance < REVERSE_GEOCODE_DISTANCE_METERS) {
+      return;
+    }
+
+    lastUserPlaceCoordsRef.current = coords;
+
+    const requestId = userPlaceRequestId.current + 1;
+    userPlaceRequestId.current = requestId;
+
+    try {
+      const placeName = await reverseGeocodePlace(coords);
+
+      if (!isMounted.current || userPlaceRequestId.current !== requestId) return;
+
+      setUserLocationName(placeName);
+    } catch {
+      if (!isMounted.current || userPlaceRequestId.current !== requestId) return;
+
+      setUserLocationName(null);
+    }
+  }
+
+  async function refreshDestinationName(coords) {
+    const requestId = destinationRequestId.current + 1;
+    destinationRequestId.current = requestId;
+
+    setDestinationName(null);
+
+    try {
+      const placeName = await reverseGeocodePlace(coords);
+
+      if (!isMounted.current || destinationRequestId.current !== requestId) return;
+
+      setDestinationName(placeName);
+    } catch {
+      if (!isMounted.current || destinationRequestId.current !== requestId) return;
+
+      setDestinationName(null);
+    }
+  }
+
+  function commitRouteCoords(nextRouteCoords) {
+    routeCoordsRef.current = nextRouteCoords;
+    setRouteCoords(nextRouteCoords);
+  }
+
+  const refreshRoute = useCallback(async (originCoords, destinationCoords, options = {}) => {
+    if (!originCoords || !destinationCoords) return;
+
+    const now = Date.now();
+
+    if (!options.force && now - lastRouteRefreshRef.current < ROUTE_REFRESH_INTERVAL_MS) {
+      return;
+    }
+
+    lastRouteRefreshRef.current = now;
+
+    const requestId = routeRequestId.current + 1;
+    routeRequestId.current = requestId;
+
+    setIsRouting(true);
+
+    try {
+      const nextRouteCoords = await fetchRouteLine(originCoords, destinationCoords);
+
+      if (!isMounted.current || routeRequestId.current !== requestId) return;
+
+      commitRouteCoords(nextRouteCoords);
+    } catch {
+      if (!isMounted.current || routeRequestId.current !== requestId) return;
+
+      commitRouteCoords([originCoords, destinationCoords]);
+    } finally {
+      if (isMounted.current && routeRequestId.current === requestId) {
+        setIsRouting(false);
+      }
+    }
+  }, []);
+
+  function handleLocationUpdate(location) {
+    if (!isMounted.current) return;
+
+    const coords = [location.coords.longitude, location.coords.latitude];
+
+    setUserCoords((previousCoords) => {
+      if (areSameCoords(previousCoords, coords)) return previousCoords;
+      return coords;
+    });
+
+    refreshUserLocationName(coords);
+
+    const activeDestination = destinationRef.current;
+
+    if (!activeDestination) return;
+
+    const distanceFromRoute = distanceToRouteInMeters(coords, routeCoordsRef.current);
+
+    if (distanceFromRoute > ROUTE_REFRESH_DISTANCE_METERS) {
+      refreshRoute(coords, activeDestination);
+    }
+  }
+
+  function handleCameraChanged(event) {
+    const coordinates =
+      event?.geometry?.coordinates ??
+      event?.properties?.center ??
+      event?.features?.[0]?.geometry?.coordinates;
+
+    if (!coordinates) return;
+
+    setMapCenter((previousCenter) => {
+      if (areSameCoords(previousCenter, coordinates)) return previousCenter;
+      return coordinates;
+    });
+  }
+
   async function handleSearch() {
     if (!searchQuery.trim()) return;
+
     setIsSearching(true);
+
     try {
       const result = await geocodePlace(searchQuery);
+
       if (!isMounted.current) return;
+
       if (result) {
         setCameraCenter(result.coords);
         setRecenterKey((k) => k + 1);
@@ -296,33 +694,46 @@ export default function SetDestinationScreen({ navigation }) {
     }
   }
 
-  /** Toggle pin-placement mode on/off. */
   function handleSelectDestination() {
     setIsPinMode((prev) => !prev);
   }
 
-  /**
-   * Confirm the crosshair position as the destination.
-   * Saves map center coords and exits pin mode.
-   */
-  function handleConfirmPin() {
-    if (!mapCenter) return;
-    setDestination([...mapCenter]);
+  async function handleConfirmPin() {
+    let confirmedDestination = mapCenter;
+
+    try {
+      const liveCenter = await mapRef.current?.getCenter();
+
+      if (liveCenter?.length === 2) {
+        confirmedDestination = liveCenter;
+      }
+    } catch {
+      confirmedDestination = mapCenter;
+    }
+
+    if (!confirmedDestination) return;
+
+    const nextDestination = [...confirmedDestination];
+
+    setDestination(nextDestination);
     setIsPinMode(false);
+    commitRouteCoords([]);
+
+    if (userCoords) {
+      refreshRoute(userCoords, nextDestination, { force: true });
+    }
   }
 
-  /**
-   * Clear the confirmed destination so the user can start over.
-   * Re-enters pin mode automatically for a smooth redo flow.
-   */
   function handleClearDestination() {
     setDestination(null);
+    setDestinationName(null);
+    commitRouteCoords([]);
     setIsPinMode(true);
   }
 
-  /** Fly camera back to the user's current GPS position. */
   function handleRecenter() {
     if (!userCoords) return;
+
     setCameraCenter([...userCoords]);
     setRecenterKey((k) => k + 1);
   }
@@ -331,50 +742,50 @@ export default function SetDestinationScreen({ navigation }) {
     navigation?.navigate('SetAlarm');
   }
 
-  // Recalculate distance every time the destination or user position changes
   const distanceLabel = haversineDistance(userCoords, destination);
 
   return (
     <View style={styles.root}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
-      {/* ── Full-screen map ──────────────────────────────────────────────── */}
-      <Map
-        style={styles.map}
-        mapStyle={OSM_STYLE_URL}
-        logoEnabled={false}
-        logoPosition={{ bottom: -100, left: -100 }}
-        attributionEnabled={false}
-        attributionPosition={{ bottom: -100, right: -100 }}
-        compassEnabled
-        compassPosition={{ bottom: 280, right: 18 }}
-        onCameraChanged={handleCameraChanged}
-      >
-        <Camera
-          key={recenterKey}
-          ref={cameraRef}
-          zoom={14}
-          center={cameraCenter ?? DEFAULT_CENTER}
-          animationMode={cameraCenter ? 'flyTo' : 'none'}
-          animationDuration={600}
-        />
+      {mapStyle ? (
+  <Map
+    ref={mapRef}
+    style={styles.map}
+    mapStyle={mapStyle}
+    logoEnabled={false}
+    logoPosition={{ bottom: -100, left: -100 }}
+    attributionEnabled={false}
+    attributionPosition={{ bottom: -100, right: -100 }}
+    compassEnabled
+    compassPosition={{ bottom: 600, right: 18 }}
+    onCameraChanged={handleCameraChanged}
+    onRegionIsChanging={handleCameraChanged}
+    onRegionDidChange={handleCameraChanged}
+  >
+    <Camera
+      key={recenterKey}
+      ref={cameraRef}
+      zoom={14}
+      center={cameraCenter ?? DEFAULT_CENTER}
+      animationMode={cameraCenter ? 'flyTo' : 'none'}
+      animationDuration={600}
+    />
 
-        <UserLocation
-          visible
-          animated
-          minDisplacement={0}
-          onUpdate={handleLocationUpdate}
-        />
+    <UserLocation
+      visible
+      animated
+      minDisplacement={0}
+      onUpdate={handleLocationUpdate}
+    />
+  </Map>
+) : (
+  <View style={styles.mapLoading}>
+    <ActivityIndicator size="large" color={COLORS.accent} />
+  </View>
+)}
 
-        {/* Static dot marker at the confirmed destination — hidden during redo */}
-        {destination && !isPinMode && (
-          <View style={styles.destinationWrapper}>
-            <View style={styles.destinationMarker} />
-          </View>
-        )}
-      </Map>
 
-      {/* ── Visual overlays (non-interactive) ───────────────────────────── */}
       <View style={styles.mapTint} pointerEvents="none" />
 
       <LinearGradient
@@ -389,7 +800,6 @@ export default function SetDestinationScreen({ navigation }) {
         pointerEvents="none"
       />
 
-      {/* ── Crosshair pin — locked to screen center during pin mode ─────── */}
       {isPinMode && (
         <View style={styles.crosshairWrapper} pointerEvents="none">
           <Ionicons name="location" size={42} color={COLORS.accent} />
@@ -397,7 +807,6 @@ export default function SetDestinationScreen({ navigation }) {
         </View>
       )}
 
-      {/* ── Confirm Pin button — floats above the bottom card in pin mode ── */}
       {isPinMode && (
         <View style={styles.confirmWrapper}>
           <TouchableOpacity activeOpacity={0.85} onPress={handleConfirmPin}>
@@ -414,7 +823,6 @@ export default function SetDestinationScreen({ navigation }) {
         </View>
       )}
 
-      {/* ── UI overlay (header, search, recenter, bottom card) ───────────── */}
       <SafeAreaView style={styles.overlay} edges={['bottom']} pointerEvents="box-none">
 
         <ScreenHeader
@@ -431,10 +839,8 @@ export default function SetDestinationScreen({ navigation }) {
           />
         </View>
 
-        {/* Transparent spacer that lets map touch events pass through */}
         <View style={styles.mapSpacer} pointerEvents="none" />
 
-        {/* Recenter button — bottom-right, above the bottom card */}
         <View style={styles.recenterWrapper}>
           <GlassButton onPress={handleRecenter}>
             <Ionicons name="navigate" size={24} color="#FFFFFF" />
@@ -444,9 +850,12 @@ export default function SetDestinationScreen({ navigation }) {
         <View style={styles.bottomSheet}>
           <SelectionCard
             destination={destination}
+            destinationName={destinationName}
             userCoords={userCoords}
+            userLocationName={userLocationName}
             isPinMode={isPinMode}
             distanceLabel={distanceLabel}
+            isRouting={isRouting}
             onSelectDestination={handleSelectDestination}
             onClearDestination={handleClearDestination}
             onContinue={handleContinue}
@@ -463,10 +872,8 @@ export default function SetDestinationScreen({ navigation }) {
 
 const styles = StyleSheet.create({
 
-  // ── Layout shells ──────────────────────────────────────────────────────────
-
   root: {
-    flex:            1,
+    flex: 1,
     backgroundColor: COLORS.background,
   },
 
@@ -478,218 +885,204 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-
-  // ── Map overlays ───────────────────────────────────────────────────────────
-
   mapTint: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(5,5,14,0.24)',
   },
 
+  mapLoading: {
+  ...StyleSheet.absoluteFillObject,
+  alignItems: 'center',
+  justifyContent: 'center',
+  backgroundColor: COLORS.background,
+},
+
+
   topFade: {
     position: 'absolute',
-    top:      0,
-    left:     0,
-    right:    0,
-    height:   100,
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 100,
   },
 
   bottomFade: {
     position: 'absolute',
-    bottom:   0,
-    left:     0,
-    right:    0,
-    height:   320,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 320,
   },
 
-
-  // ── Header ─────────────────────────────────────────────────────────────────
-
   header: {
-    flexDirection:     'row',
-    alignItems:        'center',
-    justifyContent:    'space-between',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingBottom:     12,
+    paddingBottom: 12,
   },
 
   headerTitle: {
     ...FONTS.cardTitle,
-    color:    COLORS.textPrimary,
+    color: COLORS.textPrimary,
     fontSize: 18,
   },
 
-
-  // ── Search bar ─────────────────────────────────────────────────────────────
-
   searchWrapper: {
     paddingHorizontal: 8,
-    paddingVertical:   0,
+    paddingVertical: 0,
   },
 
   searchCard: {
-    marginTop:         14,
+    marginTop: 14,
     paddingHorizontal: 14,
-    paddingVertical:   2,
+    paddingVertical: 2,
   },
 
   searchRow: {
     flexDirection: 'row',
-    alignItems:    'center',
-    gap:           10,
+    alignItems: 'center',
+    gap: 10,
   },
 
   searchInput: {
-    flex:               1,
-    fontSize:           14,
-    color:              COLORS.textPrimary,
-    paddingVertical:    2,
+    flex: 1,
+    fontSize: 14,
+    color: COLORS.textPrimary,
+    paddingVertical: 2,
     includeFontPadding: false,
   },
-
-
-  // ── Map spacer (passes touch through to the map) ───────────────────────────
 
   mapSpacer: {
     flex: 1,
   },
 
-
-  // ── Crosshair (center of screen, pin tip at true center) ──────────────────
-
   crosshairWrapper: {
-    position:       'absolute',
-    top:            0,
-    left:           0,
-    right:          0,
-    bottom:         0,
-    alignItems:     'center',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
     justifyContent: 'center',
-    marginBottom:   42, // lift so the pin tip aligns with screen center
+    marginBottom: 42,
   },
 
   crosshairDot: {
-    width:           6,
-    height:          6,
-    borderRadius:    3,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: COLORS.accent,
-    marginTop:       -4,
+    marginTop: -4,
   },
 
-
-  // ── Confirm Pin button ─────────────────────────────────────────────────────
-
   confirmWrapper: {
-    position:  'absolute',
-    bottom:    230,
+    position: 'absolute',
+    bottom: 270,
     alignSelf: 'center',
   },
 
   confirmGradient: {
-    flexDirection:     'row',
-    alignItems:        'center',
-    gap:               8,
-    paddingVertical:   12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 12,
     paddingHorizontal: 24,
-    borderRadius:      24,
+    borderRadius: 24,
   },
 
   confirmLabel: {
     ...FONTS.cardButton,
-    color:    '#fff',
+    color: '#fff',
     fontSize: 15,
   },
 
-
-  // ── Recenter button ────────────────────────────────────────────────────────
-
   recenterWrapper: {
-    alignItems:        'flex-end',
+    alignItems: 'flex-end',
     paddingHorizontal: 18,
-    paddingBottom:     12,
-    marginBottom:      5,
+    paddingBottom: 12,
+    marginBottom: 5,
   },
-
-
-  // ── Bottom sheet ───────────────────────────────────────────────────────────
 
   bottomSheet: {
     paddingHorizontal: 16,
-    paddingBottom:     16,
+    paddingBottom: 16,
   },
-
-
-  // ── Selection card ─────────────────────────────────────────────────────────
 
   selectionCard: {
     gap: 0,
   },
 
-  selectionRow: {
-    flexDirection:     'row',
-    alignItems:        'center',
-    gap:               22,
-    paddingVertical:   12,
-    borderRadius:      12,
-    paddingHorizontal: 4,
-  },
+selectionRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 14,
+  paddingVertical: 12,
+  borderRadius: 12,
+  paddingHorizontal: 4,
+},
 
-  // Highlight row background when pin-placement mode is active
   selectionRowActive: {
-    backgroundColor:   'rgba(124,92,232,0.10)',
-    marginLeft:        -8,
-    marginRight:       -8,
+    backgroundColor: 'rgba(124,92,232,0.10)',
+    marginLeft: -8,
+    marginRight: -8,
     paddingHorizontal: 12,
   },
 
   selectionIconBox: {
-    width:           36,
-    height:          36,
-    borderRadius:    10,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     backgroundColor: 'rgba(255,255,255,0.05)',
-    borderWidth:     1,
-    borderColor:     COLORS.border,
-    alignItems:      'center',
-    justifyContent:  'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
-  selectionText: {
-    flex: 1,
-    gap:  3,
-  },
+selectionText: {
+  flex: 1,
+  minWidth: 0,
+  gap: 3,
+},
 
   selectionLabel: {
     ...FONTS.sectionLabel,
     color: COLORS.textSecondary,
   },
 
-  selectionValue: {
-    ...FONTS.cardTitle,
-    color: COLORS.textPrimary,
-  },
+selectionValue: {
+  ...FONTS.cardTitle,
+  color: COLORS.textPrimary,
+  fontSize: 13,
+},
 
   selectionPlaceholder: {
     color: COLORS.textSecondary,
   },
 
+selectionCity: {
+  ...FONTS.cardTitle,
+  color: COLORS.textSecondary,
+  fontSize: 15,
+  lineHeight: 20,
+},
+
   selectionDivider: {
-    height:          1,
+    height: 1,
     backgroundColor: COLORS.border,
-    marginVertical:  4,
-    marginLeft:      48,
+    marginVertical: 4,
+    marginLeft: 48,
   },
 
-
-  // ── "Placing…" badge — shown while dragging the crosshair ─────────────────
-
   pinModeBadge: {
-    backgroundColor:   COLORS.accentSoft,
-    borderWidth:       1,
-    borderColor:       'rgba(124,92,232,0.4)',
+    backgroundColor: COLORS.accentSoft,
+    borderWidth: 1,
+    borderColor: 'rgba(124,92,232,0.4)',
     paddingHorizontal: 8,
-    marginRight:       8,
-    paddingVertical:   4,
-    borderRadius:      8,
+    marginRight: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
 
   pinModeBadgeText: {
@@ -697,85 +1090,58 @@ const styles = StyleSheet.create({
     color: COLORS.accent,
   },
 
+destinationMeta: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 6,
+  marginRight: 4,
+  flexShrink: 0,
+},
 
-  // ── Distance pill + × redo button — shown after pin is confirmed ───────────
-
-  destinationMeta: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    gap:           6,
-    marginRight:   4,
-  },
-
-  // Small pill showing straight-line distance to the destination
   distancePill: {
-    flexDirection:     'row',
-    alignItems:        'center',
-    gap:               4,
-    backgroundColor:   COLORS.accentSoft,
-    borderWidth:       1,
-    borderColor:       'rgba(124,92,232,0.35)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: COLORS.accentSoft,
+    borderWidth: 1,
+    borderColor: 'rgba(124,92,232,0.35)',
     paddingHorizontal: 8,
-    paddingVertical:   4,
-    borderRadius:      8,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
 
   distancePillText: {
     ...FONTS.cardMeta,
-    color:    COLORS.accent,
+    color: COLORS.textPrimary,
     fontSize: 11,
   },
 
-  // × button — tapping this clears the destination and re-enters pin mode
   redoButton: {
-    width:           26,
-    height:          26,
-    borderRadius:    13,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     backgroundColor: 'rgba(255,255,255,0.07)',
-    borderWidth:     1,
-    borderColor:     COLORS.border,
-    alignItems:      'center',
-    justifyContent:  'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-
-
-  // ── Continue button ────────────────────────────────────────────────────────
 
   continueTouchable: {
     marginTop: 8,
   },
 
   continueGradient: {
-    alignItems:        'center',
-    justifyContent:    'center',
-    paddingVertical:   14,
-    borderRadius:      14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 14,
   },
 
   continueLabel: {
     ...FONTS.cardButton,
-    color:    '#fff',
+    color: '#fff',
     fontSize: 15,
-  },
-
-
-  // ── Confirmed destination dot marker on the map ────────────────────────────
-
-  destinationMarker: {
-    width:           16,
-    height:          16,
-    borderRadius:    8,
-    backgroundColor: '#7C5CE8',
-    borderWidth:     2,
-    borderColor:     '#FFFFFF',
-  },
-
-  destinationWrapper: {
-    position:   'absolute',
-    top:        '50%',
-    left:       '50%',
-    marginLeft: -8,
-    marginTop:  -8,
   },
 
 });

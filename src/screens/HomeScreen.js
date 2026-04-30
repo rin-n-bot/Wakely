@@ -13,6 +13,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { COLORS, FONTS } from '../constants/theme';
 import GlassCard from '../components/GlassCard';
 import { ImageBackground } from 'react-native';
+import MaskedView from '@react-native-masked-view/masked-view';
 
 // Data 
 const QUICK_ACTIONS = [
@@ -37,7 +38,31 @@ function FloatingHeader() {
         </View>
       </TouchableOpacity>
 
-      <Text style={styles.appName}>wakely</Text>
+      <MaskedView
+  maskElement={
+    <Text style={styles.appNameMask}>
+      wakely
+    </Text>
+  }
+>
+  <LinearGradient
+  colors={[
+    '#6D28D9', // dark left
+    '#8B5CF6',
+    '#A78BFA',
+    '#D8B4FE',
+    '#F5EFFF'  // bright right
+  ]}
+  start={{ x: 0, y: 0 }}
+  end={{ x: 1, y: 0 }}
+>
+    <Text style={[styles.appNameMask, { opacity: 0 }]}>
+      wakely
+    </Text>
+  </LinearGradient>
+</MaskedView>
+
+  <View style={{ flex: 1 }} /> {/* pushes bell to right */}
 
       <TouchableOpacity hitSlop={12} activeOpacity={0.7} style={styles.floatButton}>
         <Ionicons name="notifications-outline" size={22} color={COLORS.textPrimary} />
@@ -198,24 +223,23 @@ const styles = StyleSheet.create({
     paddingBottom: 50,
   },
 
-  floatingHeader: {
-    position:          'absolute',
-    left:              0,
-    right:             0,
-    flexDirection:     'row',
-    justifyContent:    'space-between',
-    alignItems:        'center',
-    paddingHorizontal: 25,
-    paddingTop:        10,
-    zIndex:            10,
-  },
+floatingHeader: {
+  position: 'absolute',
+  left: 0,
+  right: 0,
+  flexDirection: 'row',
+  alignItems: 'center',
+  paddingHorizontal: 30,
+  paddingTop: 10,
+  zIndex: 10,
+},
 
-  appName: {
-    fontSize:      22,
-    fontWeight:    '700',
-    letterSpacing: 1,
-    color:         COLORS.accent,
-  },
+appNameMask: {
+  fontSize: 22,
+  fontWeight: '700',
+  letterSpacing: 1,
+  marginLeft: 24,
+},
 
   burgerLines: {
     gap: 6,

@@ -88,7 +88,7 @@ export default function MapScreen() {
         attributionEnabled={false}
         attributionPosition={{ bottom: -100, right: -100 }}
         compassEnabled
-        compassPosition={{ bottom: 125, right: 18 }}
+        compassPosition={{ bottom: 600, right: 18 }}
         compassViewMargins={{ x: 0, y: 0 }}
       >
         <Camera
