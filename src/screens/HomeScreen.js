@@ -24,39 +24,35 @@ const QUICK_ACTIONS = [
 ];
 
 // Floating Buttons 
-function FloatingHeader() {
+function Header() {
   const { top } = useSafeAreaInsets();
 
   return (
-    <View style={[styles.floatingHeader, { top: top + 10 }]}>
-
+    <View style={[styles.header, { paddingTop: top + 20 }]}>
+      
       <MaskedView
-        maskElement={
-          <Text style={styles.appNameMask}>
+        maskElement={<Text style={styles.appNameMask}>wakely</Text>}
+      >
+        <LinearGradient
+          colors={[
+            '#6D28D9',
+            '#8B5CF6',
+            '#A78BFA',
+            '#D8B4FE',
+            '#F5EFFF',
+          ]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+        >
+          <Text style={[styles.appNameMask, { opacity: 0 }]}>
             wakely
           </Text>
-        }
-      >
-  <LinearGradient
-  colors={[
-    '#6D28D9', // dark left
-    '#8B5CF6',
-    '#A78BFA',
-    '#D8B4FE',
-    '#F5EFFF'  // bright right
-  ]}
-  start={{ x: 0, y: 0 }}
-  end={{ x: 1, y: 0 }}
->
-    <Text style={[styles.appNameMask, { opacity: 0 }]}>
-      wakely
-    </Text>
-  </LinearGradient>
-</MaskedView>
+        </LinearGradient>
+      </MaskedView>
 
-  <View style={{ flex: 1 }} /> {/* pushes bell to right */}
+      <View style={{ flex: 1 }} />
 
-      <TouchableOpacity hitSlop={12} activeOpacity={0.7} style={styles.floatButton}>
+      <TouchableOpacity hitSlop={12} activeOpacity={0.7}>
         <Ionicons name="notifications-outline" size={22} color={COLORS.textPrimary} />
       </TouchableOpacity>
 
@@ -69,7 +65,7 @@ function Hero() {
   const { top } = useSafeAreaInsets();
 
   return (
-    <View style={[styles.hero, { paddingTop: top + 60 }]}>
+    <View style={[styles.hero, { paddingTop: top + 10 }]}>
       <View style={styles.heroTextBlock}>
         <Text style={styles.heroGreeting}>Good night,</Text>
         <Text style={styles.heroName}>Traveler </Text>
@@ -84,7 +80,7 @@ function Hero() {
 // Next Alarm Card 
 function NextAlarmCard({ navigation }) {
   return (
-    <GlassCard style={{ marginTop: 100 }}>
+    <GlassCard style={{ marginTop: 120 }}>
       <View style={styles.alarmTopRow}>
         <View style={styles.alarmInfoBlock}>
           <Text style={styles.cardSectionLabel}>Next Alarm</Text>
@@ -129,6 +125,7 @@ export default function HomeScreen({ navigation }) {
     <View style={styles.root}>
 
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <Header />
 
       <View style={styles.root}>
         <ScrollView
@@ -145,7 +142,7 @@ export default function HomeScreen({ navigation }) {
         </ScrollView>
       </View>
 
-      <FloatingHeader />
+      
         
         <View style={styles.floatingCTA}>
           <TouchableOpacity
@@ -187,15 +184,14 @@ const styles = StyleSheet.create({
     paddingBottom: 50,
   },
 
-floatingHeader: {
-  position: 'absolute',
-  left: 0,
-  right: 0,
+header: {
+  width: '100%',
   flexDirection: 'row',
   alignItems: 'center',
-  paddingHorizontal: 30,
-  paddingTop: 10,
-  zIndex: 10,
+  paddingHorizontal: 20,
+  paddingBottom: 20,
+  backgroundColor: COLORS.background, 
+  paddingTop: 20, 
 },
 
 appNameMask: {
@@ -207,7 +203,7 @@ appNameMask: {
 
   hero: {
     width:          '100%',
-    height:         280,
+    height:         150,
     justifyContent: 'flex-end',
     paddingBottom:  20,
   },
@@ -236,7 +232,7 @@ appNameMask: {
   body: {
     paddingHorizontal: 16,
     paddingTop:        14,
-    gap:               12,
+    gap:               8,
   },
 
   cardSectionLabel: {

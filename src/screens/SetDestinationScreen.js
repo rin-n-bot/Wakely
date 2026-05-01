@@ -520,6 +520,7 @@ export default function SetDestinationScreen({ navigation }) {
   const destinationRequestId    = useRef(0);
   const lastRouteRefreshRef     = useRef(0);
   const lastUserPlaceCoordsRef  = useRef(null);
+  const isScreenActive = useRef(true);
 
   const mapStyle = useMemo(
     () => buildMapStyle(baseMapStyle, routeCoords, destination),
@@ -527,11 +528,13 @@ export default function SetDestinationScreen({ navigation }) {
   );
 
   useEffect(() => {
+    isScreenActive.current = true;
+
     requestInitialLocation();
     loadBaseMapStyle();
 
     return () => {
-      isMounted.current = false;
+      isScreenActive.current = false;
     };
   }, []);
 
@@ -570,7 +573,7 @@ export default function SetDestinationScreen({ navigation }) {
 
     const initial = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
 
-    if (!isMounted.current) return;
+    if (!isScreenActive.current) return;
 
     const coords = [initial.coords.longitude, initial.coords.latitude];
 
@@ -666,7 +669,7 @@ export default function SetDestinationScreen({ navigation }) {
   }, []);
 
   function handleLocationUpdate(location) {
-    if (!isMounted.current) return;
+    if (!isScreenActive.current) return;
 
     const coords = [location.coords.longitude, location.coords.latitude];
 
@@ -704,7 +707,7 @@ export default function SetDestinationScreen({ navigation }) {
     try {
       const result = await geocodePlace(searchQuery);
 
-      if (!isMounted.current) return;
+      if (!isScreenActive.current) return;
 
       if (result) {
         setCameraCenter(result.coords);
@@ -722,15 +725,19 @@ export default function SetDestinationScreen({ navigation }) {
   async function handleConfirmPin() {
     let confirmedDestination = mapCenter;
 
-    try {
-      const liveCenter = await mapRef.current?.getCenter();
+      try {
+        const map = mapRef.current;
 
-      if (liveCenter?.length === 2) {
-        confirmedDestination = liveCenter;
+        if (map) {
+          const liveCenter = await map.getCenter();
+
+          if (liveCenter?.length === 2) {
+            confirmedDestination = liveCenter;
+          }
+        }
+      } catch {
+        confirmedDestination = mapCenter;
       }
-    } catch {
-      confirmedDestination = mapCenter;
-    }
 
     if (!confirmedDestination) return;
 
