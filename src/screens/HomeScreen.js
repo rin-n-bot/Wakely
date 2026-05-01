@@ -12,7 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, FONTS } from '../constants/theme';
 import GlassCard from '../components/GlassCard';
-import { ImageBackground } from 'react-native';
+
 import MaskedView from '@react-native-masked-view/masked-view';
 
 // Data 
@@ -29,14 +29,6 @@ function FloatingHeader() {
 
   return (
     <View style={[styles.floatingHeader, { top: top + 10 }]}>
-
-      <TouchableOpacity hitSlop={12} activeOpacity={0.7} style={styles.floatButton}>
-        <View style={styles.burgerLines}>
-          <View style={styles.burgerLine} />
-          <View style={styles.burgerLine} />
-          <View style={styles.burgerLine} />
-        </View>
-      </TouchableOpacity>
 
       <MaskedView
   maskElement={
@@ -92,7 +84,7 @@ function Hero() {
 // Next Alarm Card 
 function NextAlarmCard({ navigation }) {
   return (
-    <GlassCard style={{ marginTop: 80 }}>
+    <GlassCard style={{ marginTop: 100 }}>
       <View style={styles.alarmTopRow}>
         <View style={styles.alarmInfoBlock}>
           <Text style={styles.cardSectionLabel}>Next Alarm</Text>
@@ -108,22 +100,6 @@ function NextAlarmCard({ navigation }) {
           <Ionicons name="alarm-outline" size={26} color={COLORS.textPrimary} />
         </View>
       </View>
-
-      <TouchableOpacity
-        activeOpacity={0.82}
-        style={styles.ctaTouchable}
-        onPress={() => navigation.getParent()?.navigate('SetDestination')}
-      >
-        <LinearGradient
-          colors={['#9d6fff', '#7C5CE8', '#5c40cc']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.ctaGradient}
-        >
-          <Ionicons name="add" size={20} color={COLORS.textPrimary} />
-          <Text style={styles.ctaLabel}>Set New Destination</Text>
-        </LinearGradient>
-      </TouchableOpacity>
     </GlassCard>
   );
 }
@@ -150,12 +126,7 @@ function QuickActionsCard() {
 // Screen component
 export default function HomeScreen({ navigation }) {
   return (
-    <ImageBackground
-      source={require('../../assets/images/hero-bg.png')}
-      style={styles.root}
-      resizeMode="cover"
-      imageStyle={{ transform: [{ translateY: -30 }] }}
-    >
+    <View style={styles.root}>
 
       <LinearGradient
         colors={[
@@ -187,6 +158,23 @@ export default function HomeScreen({ navigation }) {
       </SafeAreaView>
 
       <FloatingHeader />
+        
+        <View style={styles.floatingCTA}>
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => navigation.getParent()?.navigate('SetDestination')}
+          >
+            <LinearGradient
+              colors={['#9d6fff', '#7C5CE8', '#5c40cc']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.floatingCTAButton}
+            >
+              <Ionicons name="add" size={20} color="#fff" />
+              <Text style={styles.floatingCTALabel}>Set Destination</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
 
       <LinearGradient
         colors={['rgba(5,5,14,0.98)', 'rgba(5,5,14,0.75)', 'transparent']}
@@ -194,7 +182,14 @@ export default function HomeScreen({ navigation }) {
         pointerEvents="none"
       />
 
-    </ImageBackground>
+            {/* Bottom fade — blends map into navbar */}
+            <LinearGradient
+              colors={['transparent', 'rgba(5,5,14,0.75)', 'rgba(5,5,14,0.98)']}
+              style={styles.bottomFade}
+              pointerEvents="none"
+            />
+
+    </View>
   );
 }
 
@@ -235,32 +230,21 @@ floatingHeader: {
 },
 
 appNameMask: {
-  fontSize: 22,
+  fontSize: 24,
   fontWeight: '700',
   letterSpacing: 1,
-  marginLeft: 24,
+  marginLeft: 0,
 },
-
-  burgerLines: {
-    gap: 6,
-  },
-
-  burgerLine: {
-    width:           23,
-    height:          2,
-    borderRadius:    2,
-    backgroundColor: COLORS.textPrimary,
-  },
 
   hero: {
     width:          '100%',
-    height:         280,
+    height:         300,
     justifyContent: 'flex-end',
     paddingBottom:  20,
   },
 
   heroTextBlock: {
-    paddingHorizontal: 25,
+    paddingHorizontal: 28,
   },
 
   heroGreeting: {
@@ -331,24 +315,35 @@ appNameMask: {
     marginLeft:      14,
   },
 
-  ctaTouchable: {
-    marginTop:    16,
-    borderRadius: 12,
-    overflow:     'hidden',
-  },
+  floatingCTA: {
+  position: 'absolute',
+  bottom: 25, // adjust depending on navbar height
+  left: 16,
+  right: 16,
+  alignItems: 'center',
+  zIndex: 20,
+},
 
-  ctaGradient: {
-    flexDirection:   'row',
-    alignItems:      'center',
-    justifyContent:  'center',
-    paddingVertical: 15,
-    gap:             6,
-  },
+floatingCTAButton: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 8,
+  paddingVertical: 17,
+  paddingHorizontal: 106,
+  marginBottom: 7,
+  borderRadius: 15,
+  shadowColor: '#000',
+  shadowOpacity: 0.25,
+  shadowRadius: 10,
+  shadowOffset: { width: 0, height: 6 },
+  elevation: 6,
+},
 
-  ctaLabel: {
-    ...FONTS.cardButton,
-    color: COLORS.textPrimary,
-  },
+floatingCTALabel: {
+  ...FONTS.cardButton,
+  color: '#fff',
+},
 
   actionsGrid: {
     flexDirection: 'row',
@@ -384,6 +379,14 @@ appNameMask: {
     top:      0,
     left:     0,
     right:    0,
-    height:   100,
+    height:   50,
+  },
+
+    bottomFade: {
+    position: 'absolute',
+    bottom:   0,
+    left:     0,
+    right:    0,
+    height:   50,   // adjust to taste
   },
 });

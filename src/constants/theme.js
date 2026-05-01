@@ -14,13 +14,10 @@ export const COLORS = {
 };
 
 export const FONTS = {
-
-
   // Hero
   heroGreeting: { fontSize: 18, fontWeight: '400' },
   heroName:     { fontSize: 38, fontWeight: '700', lineHeight: 46 },
   heroSubtitle: { fontSize: 13, fontWeight: '400', lineHeight: 20 },
-
 
   // Cards
   sectionLabel:  { fontSize: 14, fontWeight: '500', letterSpacing: 0.4 },
@@ -28,11 +25,9 @@ export const FONTS = {
   cardMeta:      { fontSize: 13, fontWeight: '400', lineHeight: 17 },
   cardButton:    { fontSize: 15, fontWeight: '600' },
 
-
   // Actions
   actionLabel:   { fontSize: 12, fontWeight: '400', lineHeight: 15 },
 
-  
   // Tab bar
   tabLabel:      { fontSize: 12, fontWeight: '500', letterSpacing: 0.2 },
 };

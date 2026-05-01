@@ -2,43 +2,43 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS } from '../constants/theme';
-import GlassCard      from './GlassCard';
+import GlassCard from './GlassCard';
 import GradientButton from './GradientButton';
 
-/**
- * NextAlarmCard
- * Displays the next scheduled alarm and a CTA to set a destination.
- *
- * Props:
- *  - destination : string  — place name
- *  - radius      : number  — alarm radius in meters
- *  - status      : string  — e.g. 'Inactive' | 'Active'
- *  - onPress     : function — fired when CTA is tapped
- */
 export default function NextAlarmCard({
   destination = '—',
-  radius      = 300,
-  status      = 'Inactive',
+  radius = 300,
+  status = 'Inactive',
   onPress,
 }) {
   return (
     <GlassCard>
       <View style={styles.topRow}>
 
-        {/* Left — alarm info */}
-        <View style={styles.infoBlock}>
-          <Text style={styles.sectionLabel}>Next Alarm</Text>
+        {/* left info section */}
+        <View style={styles.info}>
+          <Text style={styles.label}>Next Alarm</Text>
           <Text style={styles.destination}>{destination}</Text>
           <Text style={styles.meta}>Radius: {radius} m</Text>
           <View style={styles.statusRow}>
-            <Ionicons name="ellipse-outline" size={11} color={COLORS.textSecondary} />
-            <Text style={[styles.meta, styles.statusText]}>Status: {status}</Text>
+            <Ionicons
+              name="ellipse-outline"
+              size={11}
+              color={COLORS.textSecondary}
+            />
+            <Text style={[styles.meta, styles.statusText]}>
+              Status: {status}
+            </Text>
           </View>
         </View>
 
-        {/* Right — clock bubble */}
-        <View style={styles.clockBubble}>
-          <Ionicons name="alarm-outline" size={26} color={COLORS.textPrimary} />
+        {/* right icon */}
+        <View style={styles.iconBubble}>
+          <Ionicons
+            name="alarm-outline"
+            size={26}
+            color={COLORS.textPrimary}
+          />
         </View>
 
       </View>
@@ -48,57 +48,68 @@ export default function NextAlarmCard({
         icon="add"
         onPress={onPress}
       />
+
     </GlassCard>
   );
 }
 
 const styles = StyleSheet.create({
+  // top layout row
   topRow: {
-    flexDirection:  'row',
+    flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems:     'center',
+    alignItems: 'center',
   },
 
-  infoBlock: {
+  // left content block
+  info: {
     flex: 1,
-    gap:  4,
+    gap: 4,
   },
 
-  sectionLabel: {
+  // section title
+  label: {
     ...FONTS.sectionLabel,
-    color:        COLORS.textSecondary,
+    color: COLORS.textSecondary,
     marginBottom: 8,
   },
 
+  // destination text
   destination: {
     ...FONTS.cardTitle,
     color: COLORS.textPrimary,
   },
 
+  // small text
   meta: {
     ...FONTS.cardMeta,
     color: COLORS.textSecondary,
   },
 
+  // status row
   statusRow: {
     flexDirection: 'row',
-    alignItems:    'center',
-    marginTop:     2,
+    alignItems: 'center',
   },
 
+  // status spacing
   statusText: {
     marginLeft: 4,
   },
 
-  clockBubble: {
-    width:           52,
-    height:          52,
-    borderRadius:    26,
+  // alarm icon bubble
+  iconBubble: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+
     backgroundColor: COLORS.accentSoft,
-    borderWidth:     1,
-    borderColor:     'rgba(124,92,232,0.35)',
-    alignItems:      'center',
-    justifyContent:  'center',
-    marginLeft:      14,
+    borderWidth: 1,
+    borderColor: 'rgba(124,92,232,0.35)',
+
+    alignItems: 'center',
+    justifyContent: 'center',
+
+    marginLeft: 14,
   },
 });

@@ -27,9 +27,11 @@ import { COLORS, FONTS } from '../constants/theme';
 const OSM_STYLE_URL  = 'https://tiles.openfreemap.org/styles/dark';
 const DEFAULT_CENTER = [125.4553, 7.1907];
 
-const OSRM_ROUTE_URL = 'https://router.project-osrm.org/route/v1/driving';
+const ORS_API_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjU3YzZjOGMyOThjNDQyNjRhNmZiMDU1OWRkNmM2Njc4IiwiaCI6Im11cm11cjY0In0=';
+const ORS_DIRECTIONS_URL = 'https://api.openrouteservice.org/v2/directions/driving-car/geojson';
+
 const ROUTE_REFRESH_DISTANCE_METERS = 35;
-const ROUTE_REFRESH_INTERVAL_MS = 7000;
+const ROUTE_REFRESH_INTERVAL_MS = 15000;
 const REVERSE_GEOCODE_DISTANCE_METERS = 100;
 const COORDINATE_EPSILON = 0.000001;
 
@@ -93,19 +95,44 @@ async function reverseGeocodePlace(coords) {
 
 
 async function fetchRouteLine(originCoords, destinationCoords) {
-  if (!originCoords || !destinationCoords) return [];
+  try {
+    const res = await fetch(ORS_DIRECTIONS_URL, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json, application/geo+json',
+        Authorization: ORS_API_KEY,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        coordinates: [originCoords, destinationCoords],
+      }),
+    });
 
-  const origin      = `${originCoords[0]},${originCoords[1]}`;
-  const destination = `${destinationCoords[0]},${destinationCoords[1]}`;
-  const url         = `${OSRM_ROUTE_URL}/${origin};${destination}?overview=full&geometries=geojson`;
+    console.log('ORS STATUS:', res.status);
 
-  const res  = await fetch(url);
-  const data = await res.json();
+    const text = await res.text();
+    console.log('ORS RAW RESPONSE:', text);
 
-  const routeCoords = data?.routes?.[0]?.geometry?.coordinates;
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      console.log('❌ NOT JSON RESPONSE');
+      return [originCoords, destinationCoords];
+    }
 
-  return routeCoords?.length >= 2 ? routeCoords : [originCoords, destinationCoords];
+    const routeCoords = data?.features?.[0]?.geometry?.coordinates;
+
+    return routeCoords?.length
+      ? routeCoords
+      : [originCoords, destinationCoords];
+
+  } catch (err) {
+    console.log('FETCH FAILED:', err);
+    return [originCoords, destinationCoords];
+  }
 }
+
 
 function distanceInMeters(coordsA, coordsB) {
   if (!coordsA || !coordsB) return null;
@@ -650,15 +677,9 @@ export default function SetDestinationScreen({ navigation }) {
 
     refreshUserLocationName(coords);
 
-    const activeDestination = destinationRef.current;
+// Dev mode: avoid auto-rerouting on every GPS movement to protect routing quota.
+// Route is requested only when the user confirms a pin.
 
-    if (!activeDestination) return;
-
-    const distanceFromRoute = distanceToRouteInMeters(coords, routeCoordsRef.current);
-
-    if (distanceFromRoute > ROUTE_REFRESH_DISTANCE_METERS) {
-      refreshRoute(coords, activeDestination);
-    }
   }
 
   function handleCameraChanged(event) {
@@ -758,7 +779,7 @@ export default function SetDestinationScreen({ navigation }) {
     attributionEnabled={false}
     attributionPosition={{ bottom: -100, right: -100 }}
     compassEnabled
-    compassPosition={{ bottom: 600, right: 18 }}
+    compassPosition={{ bottom: 540, right: 22 }}
     onCameraChanged={handleCameraChanged}
     onRegionIsChanging={handleCameraChanged}
     onRegionDidChange={handleCameraChanged}
@@ -841,13 +862,22 @@ export default function SetDestinationScreen({ navigation }) {
 
         <View style={styles.mapSpacer} pointerEvents="none" />
 
+
         <View style={styles.recenterWrapper}>
-          <GlassButton onPress={handleRecenter}>
-            <Ionicons name="navigate" size={24} color="#FFFFFF" />
-          </GlassButton>
+          <TouchableOpacity activeOpacity={0.85} onPress={handleRecenter}>
+            <LinearGradient
+              colors={['#9d6fff', '#7C5CE8', '#5c40cc']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.recenterButton}
+            >
+              <Ionicons name="navigate" size={20} color="#fff" />
+            </LinearGradient>
+          </TouchableOpacity>
         </View>
 
-        <View style={styles.bottomSheet}>
+        <View style={styles.bottomSheetWrapper}>
+          <View style={styles.bottomSheet}>
           <SelectionCard
             destination={destination}
             destinationName={destinationName}
@@ -860,6 +890,7 @@ export default function SetDestinationScreen({ navigation }) {
             onClearDestination={handleClearDestination}
             onContinue={handleContinue}
           />
+          </View>
         </View>
 
       </SafeAreaView>
@@ -903,7 +934,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 100,
+    height: 50,
   },
 
   bottomFade: {
@@ -911,7 +942,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: 320,
+    height: 50,
   },
 
   header: {
@@ -1001,16 +1032,34 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     paddingHorizontal: 18,
     paddingBottom: 12,
-    marginBottom: 5,
+    marginBottom: 590,
   },
 
+  recenterButton: {
+  width: 50,
+  height: 50,
+  borderRadius: 24,
+  marginRight:  4,
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+
+bottomSheetWrapper: {
+  position: 'absolute',
+  bottom: 0,
+  left: 0,
+  right: 0,
+  paddingBottom: 16,
+  paddingHorizontal: 16,
+},
+
   bottomSheet: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+  paddingBottom: 0,
   },
 
   selectionCard: {
     gap: 0,
+    paddingVertical: 14,
   },
 
 selectionRow: {
@@ -1071,7 +1120,7 @@ selectionCity: {
   selectionDivider: {
     height: 1,
     backgroundColor: COLORS.border,
-    marginVertical: 4,
+    marginVertical: 8,
     marginLeft: 48,
   },
 
@@ -1128,7 +1177,7 @@ destinationMeta: {
   },
 
   continueTouchable: {
-    marginTop: 8,
+    marginTop: 14,
   },
 
   continueGradient: {

@@ -88,7 +88,7 @@ export default function MapScreen() {
         attributionEnabled={false}
         attributionPosition={{ bottom: -100, right: -100 }}
         compassEnabled
-        compassPosition={{ bottom: 600, right: 18 }}
+        compassPosition={{ bottom: 498, right: 22 }}
         compassViewMargins={{ x: 0, y: 0 }}
       >
         <Camera
@@ -132,6 +132,12 @@ export default function MapScreen() {
       {/* Purple-dark tint overlay */}
       <View style={styles.mapTint} pointerEvents="none" />
 
+      <LinearGradient
+              colors={['rgba(5,5,14,0.98)', 'rgba(5,5,14,0.75)', 'transparent']}
+              style={styles.topFade}
+              pointerEvents="none"
+            />
+
       {/* Bottom fade — blends map into navbar */}
       <LinearGradient
         colors={['transparent', 'rgba(5,5,14,0.75)', 'rgba(5,5,14,0.98)']}
@@ -142,9 +148,16 @@ export default function MapScreen() {
       {/* Bottom-right button stack: compass sits above, recenter below */}
       <View style={styles.buttonStack} pointerEvents="box-none">
         {/* Location / recenter button */}
-        <GlassButton onPress={handleRecenterPress}>
-          <Ionicons name="navigate" size={24} color="#FFFFFF" />
-        </GlassButton>
+        <TouchableOpacity onPress={handleRecenterPress} activeOpacity={0.85}>
+          <LinearGradient
+            colors={['#9d6fff', '#7C5CE8', '#5c40cc']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.recenterButton}
+          >
+            <Ionicons name="navigate" size={24} color="#FFFFFF" />
+          </LinearGradient>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -173,10 +186,32 @@ const styles = StyleSheet.create({
   // Bottom-right stack — compass is rendered by MapLibre above this
   buttonStack: {
     position:       'absolute',
-    bottom:         60,
+    bottom:         560,
     right:           18,
     alignItems:     'center',
     gap:            10,
+  },
+
+  recenterButton: {
+  width: 50,
+  height: 50,
+  borderRadius: 27,
+  alignItems: 'center',
+  justifyContent: 'center',
+  shadowColor: '#000',
+  shadowOpacity: 0.25,
+  shadowRadius: 8,
+  marginRight: 4,
+  shadowOffset: { width: 0, height: 4 },
+  elevation: 5,
+},
+
+  topFade: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 50,
   },
 
   // Bottom fade — blends map into navbar
@@ -185,6 +220,6 @@ const styles = StyleSheet.create({
     bottom:   0,
     left:     0,
     right:    0,
-    height:   40,   // adjust to taste
+    height:   50,   // adjust to taste
   },
 });
