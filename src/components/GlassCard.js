@@ -10,7 +10,7 @@ export default function GlassCard({ children, style }) {
         {/* light shine effect */}
         <LinearGradient
           colors={[
-            'rgba(255,255,255,0.0)',
+            'rgba(255,255,255,0.04)',
             'rgba(255,255,255,0.01)',
             'transparent',
           ]}

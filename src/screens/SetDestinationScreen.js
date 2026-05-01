@@ -27,7 +27,7 @@ import { COLORS, FONTS } from '../constants/theme';
 const OSM_STYLE_URL  = 'https://tiles.openfreemap.org/styles/dark';
 const DEFAULT_CENTER = [125.4553, 7.1907];
 
-const ORS_API_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjU3YzZjOGMyOThjNDQyNjRhNmZiMDU1OWRkNmM2Njc4IiwiaCI6Im11cm11cjY0In0=';
+const ORS_API_KEY = process.env.EXPO_PUBLIC_ORS_API_KEY;
 const ORS_DIRECTIONS_URL = 'https://api.openrouteservice.org/v2/directions/driving-car/geojson';
 
 const ROUTE_REFRESH_DISTANCE_METERS = 35;
@@ -806,20 +806,7 @@ export default function SetDestinationScreen({ navigation }) {
   </View>
 )}
 
-
       <View style={styles.mapTint} pointerEvents="none" />
-
-      <LinearGradient
-        colors={['rgba(5,5,14,0.98)', 'rgba(5,5,14,0.75)', 'transparent']}
-        style={styles.topFade}
-        pointerEvents="none"
-      />
-
-      <LinearGradient
-        colors={['transparent', 'rgba(5,5,14,0.6)', 'rgba(5,5,14,0.95)']}
-        style={styles.bottomFade}
-        pointerEvents="none"
-      />
 
       {isPinMode && (
         <View style={styles.crosshairWrapper} pointerEvents="none">
@@ -927,23 +914,6 @@ const styles = StyleSheet.create({
   justifyContent: 'center',
   backgroundColor: COLORS.background,
 },
-
-
-  topFade: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 50,
-  },
-
-  bottomFade: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 50,
-  },
 
   header: {
     flexDirection: 'row',

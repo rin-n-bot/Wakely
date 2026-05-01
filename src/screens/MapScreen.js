@@ -132,19 +132,6 @@ export default function MapScreen() {
       {/* Purple-dark tint overlay */}
       <View style={styles.mapTint} pointerEvents="none" />
 
-      <LinearGradient
-              colors={['rgba(5,5,14,0.98)', 'rgba(5,5,14,0.75)', 'transparent']}
-              style={styles.topFade}
-              pointerEvents="none"
-            />
-
-      {/* Bottom fade — blends map into navbar */}
-      <LinearGradient
-        colors={['transparent', 'rgba(5,5,14,0.75)', 'rgba(5,5,14,0.98)']}
-        style={styles.bottomFade}
-        pointerEvents="none"
-      />
-
       {/* Bottom-right button stack: compass sits above, recenter below */}
       <View style={styles.buttonStack} pointerEvents="box-none">
         {/* Location / recenter button */}
@@ -205,21 +192,4 @@ const styles = StyleSheet.create({
   shadowOffset: { width: 0, height: 4 },
   elevation: 5,
 },
-
-  topFade: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 50,
-  },
-
-  // Bottom fade — blends map into navbar
-  bottomFade: {
-    position: 'absolute',
-    bottom:   0,
-    left:     0,
-    right:    0,
-    height:   50,   // adjust to taste
-  },
 });

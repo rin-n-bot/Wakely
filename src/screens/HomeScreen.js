@@ -31,12 +31,12 @@ function FloatingHeader() {
     <View style={[styles.floatingHeader, { top: top + 10 }]}>
 
       <MaskedView
-  maskElement={
-    <Text style={styles.appNameMask}>
-      wakely
-    </Text>
-  }
->
+        maskElement={
+          <Text style={styles.appNameMask}>
+            wakely
+          </Text>
+        }
+      >
   <LinearGradient
   colors={[
     '#6D28D9', // dark left
@@ -128,21 +128,9 @@ export default function HomeScreen({ navigation }) {
   return (
     <View style={styles.root}>
 
-      <LinearGradient
-        colors={[
-          'transparent',
-          'rgba(5,5,14,0.5)',
-          'rgba(5,5,14,0.85)',
-          'rgba(5,5,14,0.98)',
-        ]}
-        locations={[0, 0.35, 0.65, 1]}
-        style={styles.imageTint}
-        pointerEvents="none"
-      />
-
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
-      <SafeAreaView style={styles.safe} edges={['bottom']}>
+      <View style={styles.root}>
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
@@ -155,7 +143,7 @@ export default function HomeScreen({ navigation }) {
             <QuickActionsCard />
           </View>
         </ScrollView>
-      </SafeAreaView>
+      </View>
 
       <FloatingHeader />
         
@@ -176,19 +164,6 @@ export default function HomeScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-      <LinearGradient
-        colors={['rgba(5,5,14,0.98)', 'rgba(5,5,14,0.75)', 'transparent']}
-        style={styles.topFade}
-        pointerEvents="none"
-      />
-
-            {/* Bottom fade — blends map into navbar */}
-            <LinearGradient
-              colors={['transparent', 'rgba(5,5,14,0.75)', 'rgba(5,5,14,0.98)']}
-              style={styles.bottomFade}
-              pointerEvents="none"
-            />
-
     </View>
   );
 }
@@ -198,12 +173,6 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: COLORS.background,
-  },
-
-  imageTint: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(5, 5, 14, 0.8)',
-    zIndex: 0,
   },
 
   safe: {
@@ -238,7 +207,7 @@ appNameMask: {
 
   hero: {
     width:          '100%',
-    height:         300,
+    height:         280,
     justifyContent: 'flex-end',
     paddingBottom:  20,
   },
@@ -331,7 +300,7 @@ floatingCTAButton: {
   gap: 8,
   paddingVertical: 17,
   paddingHorizontal: 106,
-  marginBottom: 7,
+  marginBottom: -10,
   borderRadius: 15,
   shadowColor: '#000',
   shadowOpacity: 0.25,
@@ -372,21 +341,5 @@ floatingCTALabel: {
     ...FONTS.actionLabel,
     color:     COLORS.textPrimary,
     textAlign: 'center',
-  },
-
-  topFade: {
-    position: 'absolute',
-    top:      0,
-    left:     0,
-    right:    0,
-    height:   50,
-  },
-
-    bottomFade: {
-    position: 'absolute',
-    bottom:   0,
-    left:     0,
-    right:    0,
-    height:   50,   // adjust to taste
   },
 });
