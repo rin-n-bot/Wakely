@@ -34,14 +34,12 @@ export default function GradientButton({
 }
 
 const styles = StyleSheet.create({
-  // button wrapper
   container: {
     marginTop: 16,
     borderRadius: 12,
     overflow: 'hidden',
   },
 
-  // gradient background
   gradient: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -50,7 +48,6 @@ const styles = StyleSheet.create({
     gap: 6,
   },
 
-  // button text
   label: {
     ...FONTS.cardButton,
     color: COLORS.textPrimary,

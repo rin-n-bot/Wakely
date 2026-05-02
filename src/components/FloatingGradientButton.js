@@ -30,23 +30,20 @@ export default function FloatingGradientButton({
 }
 
 const styles = StyleSheet.create({
-  // floating button wrapper
   container: {
     position: 'absolute',
     left: 16,
     right: 16,
-    borderRadius: 14,
+    borderRadius: 24,
     overflow: 'hidden',
   },
 
-  // gradient background area
   gradient: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 17,
   },
 
-  // button text style
   label: {
     ...FONTS.cardButton,
     color: COLORS.textPrimary,

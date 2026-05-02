@@ -54,62 +54,51 @@ export default function NextAlarmCard({
 }
 
 const styles = StyleSheet.create({
-  // top layout row
   topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
 
-  // left content block
   info: {
     flex: 1,
     gap: 4,
   },
 
-  // section title
   label: {
     ...FONTS.sectionLabel,
     color: COLORS.textSecondary,
     marginBottom: 8,
   },
 
-  // destination text
   destination: {
     ...FONTS.cardTitle,
     color: COLORS.textPrimary,
   },
 
-  // small text
   meta: {
     ...FONTS.cardMeta,
     color: COLORS.textSecondary,
   },
 
-  // status row
   statusRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
 
-  // status spacing
   statusText: {
     marginLeft: 4,
   },
 
-  // alarm icon bubble
   iconBubble: {
     width: 52,
     height: 52,
     borderRadius: 26,
-
     backgroundColor: COLORS.accentSoft,
     borderWidth: 1,
     borderColor: 'rgba(124,92,232,0.35)',
-
     alignItems: 'center',
     justifyContent: 'center',
-
     marginLeft: 14,
   },
 });

@@ -14,7 +14,7 @@ export default function GlassButton({ onPress, children, style }) {
       {/* shine effect */}
       <LinearGradient
         colors={[
-          'rgba(255,255,255,0.0)',
+          'rgba(255,255,255,0.04)',
           'rgba(255,255,255,0.01)',
           'transparent',
         ]}
@@ -30,13 +30,10 @@ export default function GlassButton({ onPress, children, style }) {
 }
 
 const styles = StyleSheet.create({
-  // button container with glass look + shadow
   shadow: {
     borderRadius: 10,
     padding: 11,
-
     backgroundColor: 'rgba(20,22,45,0.75)',
-
     borderWidth: 1,
     borderColor: 'rgba(0, 0, 0, 0.1)',
     borderTopColor: 'rgba(0, 0, 0, 0.14)',

@@ -15,20 +15,20 @@ export const COLORS = {
 
 export const FONTS = {
   // Hero
-  heroGreeting: { fontSize: 18, fontWeight: '400' },
-  heroName:     { fontSize: 38, fontWeight: '700', lineHeight: 46 },
-  heroSubtitle: { fontSize: 13, fontWeight: '400', lineHeight: 20 },
+  heroGreeting: { fontSize: 18, fontWeight: '400', letterSpacing: -0.5 },
+  heroName:     { fontSize: 26, fontWeight: '600', lineHeight: 46, letterSpacing: 1 },
+  heroSubtitle: { fontSize: 13, fontWeight: '400', lineHeight: 20, letterSpacing: -0.5 },
 
   // Cards
-  sectionLabel:  { fontSize: 14, fontWeight: '500', letterSpacing: 0.4 },
-  cardTitle:     { fontSize: 16, fontWeight: '600' },
-  cardMeta:      { fontSize: 13, fontWeight: '400', lineHeight: 17 },
-  cardButton:    { fontSize: 15, fontWeight: '600' },
+  sectionLabel:  { fontSize: 14, fontWeight: '500', letterSpacing: -0.5 },
+  cardTitle:     { fontSize: 16, fontWeight: '600', letterSpacing: -0.5 },
+  cardMeta:      { fontSize: 13, fontWeight: '400', lineHeight: 17, letterSpacing: -0.5 },
+  cardButton:    { fontSize: 15, fontWeight: '600', letterSpacing: -0.5 },
 
   // Actions
-  actionLabel:   { fontSize: 12, fontWeight: '400', lineHeight: 15 },
+  actionLabel:   { fontSize: 12, fontWeight: '400', lineHeight: 15, letterSpacing: -0.5 },
 
   // Tab bar
-  tabLabel:      { fontSize: 12, fontWeight: '500', letterSpacing: 0.2 },
+  tabLabel:      { fontSize: 11, fontWeight: '500', letterSpacing: -0.5 },
 };
 

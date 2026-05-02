@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, Pressable, StyleSheet, Animated } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,7 +10,7 @@ import AlarmsScreen from '../screens/AlarmsScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import { FONTS } from '../constants/theme';
 
-// tab config
+// Tabs Config 
 const TABS = [
   {
     name: 'Home',
@@ -42,45 +42,83 @@ const TABS = [
   },
 ];
 
-// colors used for tab UI
+// Colors 
 const COLORS = {
   background: '#05050e',
-  border: 'rgba(255,255,255,0.08)',
   active: '#7C5CE8',
   inactive: '#4A4A6A',
 };
 
-// custom tab bar
+// Animated Tab Item
+function TabItem({ tab, isFocused, onPress }) {
+  const translateY = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.spring(translateY, {
+      toValue: isFocused ? -5 : 0,
+      useNativeDriver: true,
+      friction: 6,
+    }).start();
+
+    Animated.spring(scale, {
+      toValue: isFocused ? 1.12 : 1,
+      useNativeDriver: true,
+      friction: 6,
+    }).start();
+  }, [isFocused]);
+
+  const color = isFocused ? COLORS.active : COLORS.inactive;
+
+  return (
+    <Pressable style={styles.tabItem} onPress={onPress}>
+      <Animated.View
+        style={{
+          transform: [
+            { translateY },
+            { scale },
+          ],
+        }}
+      >
+        <Ionicons
+          name={isFocused ? tab.iconFocused : tab.icon}
+          size={22}
+          color={color}
+        />
+      </Animated.View>
+
+      <Text style={[styles.label, { color }]}>
+        {tab.label}
+      </Text>
+    </Pressable>
+  );
+}
+
+// Tab Bar 
 function WakelyTabBar({ state, navigation }) {
   const { bottom } = useSafeAreaInsets();
+
   return (
     <View style={[styles.tabBar, { paddingBottom: bottom || 10 }]}>
       {TABS.map((tab, index) => {
         const isFocused = state.index === index;
-        const color = isFocused ? COLORS.active : COLORS.inactive;
 
         return (
-          <Pressable
+          <TabItem
             key={tab.name}
-            style={styles.tabItem}
+            tab={tab}
+            isFocused={isFocused}
             onPress={() => {
               if (!isFocused) navigation.navigate(tab.name);
             }}
-          >
-            <Ionicons
-              name={isFocused ? tab.iconFocused : tab.icon}
-              size={24}
-              color={color}
-            />
-            <Text style={[styles.label, { color }]}>{tab.label}</Text>
-          </Pressable>
+          />
         );
       })}
     </View>
   );
 }
 
-// bottom tab navigator
+// Navigator 
 const Tab = createBottomTabNavigator();
 
 export default function RootNavigator() {
@@ -89,7 +127,6 @@ export default function RootNavigator() {
       screenOptions={{ headerShown: false }}
       tabBar={(props) => <WakelyTabBar {...props} />}
     >
-      
       {TABS.map((tab) => (
         <Tab.Screen
           key={tab.name}
@@ -97,20 +134,19 @@ export default function RootNavigator() {
           component={tab.screen}
         />
       ))}
-
     </Tab.Navigator>
   );
 }
 
-// styles
+// Styles 
 const styles = StyleSheet.create({
   tabBar: {
     flexDirection: 'row',
     backgroundColor: COLORS.background,
     borderTopWidth: 1,
-    borderTopColor: COLORS.background,
-    paddingTop: 20,
-    height: 80,
+    borderTopColor: 'rgba(255,255,255,0.05)',
+    paddingTop: 14,
+    height: 85,
   },
 
   tabItem: {
@@ -118,12 +154,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
-    paddingBottom: 20,
   },
 
   label: {
-    fontSize: FONTS.tabLabel.fontSize,
+    fontSize: FONTS.tabLabel?.fontSize || 12,
     fontWeight: '500',
-    letterSpacing: 0.2,
+    letterSpacing: -0.3,
   },
 });

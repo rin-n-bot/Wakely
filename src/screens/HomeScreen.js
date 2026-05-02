@@ -9,26 +9,19 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, FONTS } from '../constants/theme';
 import GlassCard from '../components/GlassCard';
+import QuickActionsSection from '../sections/QuickActionsSection';
 
 import MaskedView from '@react-native-masked-view/masked-view';
-
-// Data 
-const QUICK_ACTIONS = [
-  { icon: 'download-outline', label: 'Download\nMaps' },
-  { icon: 'location-outline', label: 'My Places'      },
-  { icon: 'settings-outline', label: 'Settings'       },
-  { icon: 'time-outline',     label: 'History'        },
-];
 
 // Floating Buttons 
 function Header() {
   const { top } = useSafeAreaInsets();
 
   return (
-    <View style={[styles.header, { paddingTop: top + 20 }]}>
+    <View style={[styles.header, { paddingTop: top + 28 }]}>
       
       <MaskedView
         maskElement={<Text style={styles.appNameMask}>wakely</Text>}
@@ -62,15 +55,13 @@ function Header() {
 
 // Hero
 function Hero() {
-  const { top } = useSafeAreaInsets();
 
   return (
-    <View style={[styles.hero, { paddingTop: top + 10 }]}>
+    <View style={styles.hero}>
       <View style={styles.heroTextBlock}>
-        <Text style={styles.heroGreeting}>Good night,</Text>
-        <Text style={styles.heroName}>Traveler </Text>
-        <Text style={styles.heroSubtitle}>
-          Sleep well, we'll wake you up{'\n'}at the right place.
+        <Text style={styles.heroTitle}>
+          Hello,{'\n'}
+          Kaxandra
         </Text>
       </View>
     </View>
@@ -80,7 +71,7 @@ function Hero() {
 // Next Alarm Card 
 function NextAlarmCard({ navigation }) {
   return (
-    <GlassCard style={{ marginTop: 120 }}>
+    <GlassCard style={{ marginTop: 20 }}>
       <View style={styles.alarmTopRow}>
         <View style={styles.alarmInfoBlock}>
           <Text style={styles.cardSectionLabel}>Next Alarm</Text>
@@ -100,22 +91,30 @@ function NextAlarmCard({ navigation }) {
   );
 }
 
-// Quick Actions Card 
-function QuickActionsCard() {
+// Recent Destinations (empty state)
+function RecentDestinations() {
   return (
-    <GlassCard>
-      <Text style={styles.cardSectionLabel}>Quick Actions</Text>
-      <View style={styles.actionsGrid}>
-        {QUICK_ACTIONS.map((item) => (
-          <TouchableOpacity key={item.label} style={styles.actionCol} activeOpacity={0.7}>
-            <View style={styles.actionIconBox}>
-              <Ionicons name={item.icon} size={22} color={COLORS.textPrimary} />
-            </View>
-            <Text style={styles.actionLabel}>{item.label}</Text>
-          </TouchableOpacity>
-        ))}
+    <View style={styles.recentSection}>
+
+      {/* Header row */}
+      <View style={styles.recentHeader}>
+        <Text style={styles.recentLabel}>Recent Destinations</Text>
+
+        <TouchableOpacity activeOpacity={0.7}>
+          <Text style={styles.seeAllText}>See all</Text>
+        </TouchableOpacity>
       </View>
-    </GlassCard>
+
+      {/* Empty state */}
+      <View style={styles.emptyState}>
+        <Ionicons name="time-outline" size={24} color={COLORS.textSecondary} />
+        <Text style={styles.emptyTitle}>None</Text>
+        <Text style={styles.emptySubtitle}>
+          Your recent destinations will appear here
+        </Text>
+      </View>
+
+    </View>
   );
 }
 
@@ -127,7 +126,6 @@ export default function HomeScreen({ navigation }) {
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       <Header />
 
-      <View style={styles.root}>
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
@@ -137,13 +135,11 @@ export default function HomeScreen({ navigation }) {
           <Hero />
           <View style={styles.body}>
             <NextAlarmCard navigation={navigation} />
-            <QuickActionsCard />
+            <QuickActionsSection navigation={navigation} />
+            <RecentDestinations />
           </View>
         </ScrollView>
-      </View>
-
-      
-        
+       
         <View style={styles.floatingCTA}>
           <TouchableOpacity
             activeOpacity={0.85}
@@ -170,10 +166,7 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: COLORS.background,
-  },
-
-  safe: {
-    flex: 1,
+    paddingHorizontal: 2,
   },
 
   scroll: {
@@ -184,49 +177,35 @@ const styles = StyleSheet.create({
     paddingBottom: 50,
   },
 
-header: {
-  width: '100%',
-  flexDirection: 'row',
-  alignItems: 'center',
-  paddingHorizontal: 20,
-  paddingBottom: 20,
-  backgroundColor: COLORS.background, 
-  paddingTop: 20, 
-},
+  header: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 10,
+    backgroundColor: COLORS.background, 
+  },
 
-appNameMask: {
-  fontSize: 24,
-  fontWeight: '700',
-  letterSpacing: 1,
-  marginLeft: 0,
-},
+  appNameMask: {
+    fontSize: 24,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginLeft: 0,
+  },
 
   hero: {
-    width:          '100%',
-    height:         150,
-    justifyContent: 'flex-end',
-    paddingBottom:  20,
+    width: '100%',
+    marginTop: 0,   
+  },
+
+  heroTitle: {
+    ...FONTS.heroName,
+    color: COLORS.textPrimary,
+    lineHeight: 32,
   },
 
   heroTextBlock: {
-    paddingHorizontal: 28,
-  },
-
-  heroGreeting: {
-    ...FONTS.heroGreeting,
-    color: COLORS.textPrimary,
-  },
-
-  heroName: {
-    ...FONTS.heroName,
-    color:     COLORS.textPrimary,
-    marginTop: 2,
-  },
-
-  heroSubtitle: {
-    ...FONTS.heroSubtitle,
-    color:     COLORS.textSecondary,
-    marginTop: 6,
+    paddingHorizontal: 24,
   },
 
   body: {
@@ -280,9 +259,55 @@ appNameMask: {
     marginLeft:      14,
   },
 
+  recentSection: {
+  marginTop: 18,
+},
+
+recentHeader: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: 12,
+  paddingHorizontal: 4,
+},
+
+recentLabel: {
+  ...FONTS.sectionLabel,
+  color: COLORS.textSecondary,
+},
+
+seeAllText: {
+  ...FONTS.cardMeta,
+  color: '#9d6fff',
+  fontSize: 13,
+},
+
+emptyState: {
+  height: 140,
+  borderRadius: 16,
+  borderWidth: 1,
+  borderColor: COLORS.border,
+  backgroundColor: 'rgba(255,255,255,0.03)',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 6,
+},
+
+emptyTitle: {
+  ...FONTS.cardTitle,
+  color: COLORS.textPrimary,
+},
+
+emptySubtitle: {
+  ...FONTS.cardMeta,
+  color: COLORS.textSecondary,
+  textAlign: 'center',
+  paddingHorizontal: 20,
+},
+
   floatingCTA: {
   position: 'absolute',
-  bottom: 25, // adjust depending on navbar height
+  bottom: 25,
   left: 16,
   right: 16,
   alignItems: 'center',
@@ -297,7 +322,7 @@ floatingCTAButton: {
   paddingVertical: 17,
   paddingHorizontal: 106,
   marginBottom: -10,
-  borderRadius: 15,
+  borderRadius: 24,
   shadowColor: '#000',
   shadowOpacity: 0.25,
   shadowRadius: 10,
@@ -309,33 +334,4 @@ floatingCTALabel: {
   ...FONTS.cardButton,
   color: '#fff',
 },
-
-  actionsGrid: {
-    flexDirection: 'row',
-    alignItems:    'flex-start',
-    marginTop:     4,
-  },
-
-  actionCol: {
-    flex:       1,
-    alignItems: 'center',
-    gap:        8,
-  },
-
-  actionIconBox: {
-    width:           52,
-    height:          52,
-    borderRadius:    13,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderWidth:     1,
-    borderColor:     COLORS.border,
-    alignItems:      'center',
-    justifyContent:  'center',
-  },
-
-  actionLabel: {
-    ...FONTS.actionLabel,
-    color:     COLORS.textPrimary,
-    textAlign: 'center',
-  },
 });
